@@ -84,7 +84,7 @@ class Game(arcade.Window):
         self.clear()
 
         # Activate our Camera
-        self.scene.draw()
+        self.camera.use()
 
         # Draw our Scene
         self.scene.draw()
