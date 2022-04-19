@@ -37,6 +37,12 @@ class Game(arcade.Window):
         # A Camera that can be used for scrolling the screen
         self.camera = None
 
+        # A Camera that can be used to draw GUI elements
+        self.gui_camera = None
+
+        # Keep track of the score
+        self.score = 0
+
         # Load sounds
         self.collect_coin_sound = arcade.load_sound(":resources:sounds/coin1.wav")
         self.jump_sound = arcade.load_sound(":resources:sounds/jump1.wav")
@@ -48,6 +54,12 @@ class Game(arcade.Window):
 
         # Set up the Camera
         self.camera = arcade.Camera(self.width, self.height)
+
+        # Set up the GUI Camera
+        self.gui_camera = arcade.Camera(self.width, self.height)
+
+        # Keep track of the score
+        self.score = 0
 
         # Initialize Scene
         self.scene = arcade.Scene()
@@ -101,6 +113,13 @@ class Game(arcade.Window):
         # Draw our Scene
         self.scene.draw()
 
+        # Activate the GUI camera before drawing GUI elements
+        self.gui_camera.use()
+        
+        # Draw our score on the screen, scrolling it with the viewport
+        score_text = f"Score: {self.score}"
+        arcade.draw_text(text=score_text, start_x=10, start_y=10, color=arcade.csscolor.WHITE, font_size=18)
+
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed."""
         if key == arcade.key.UP or key == arcade.key.W:
@@ -145,6 +164,8 @@ class Game(arcade.Window):
             coin.remove_from_sprite_lists()
             # Play a sound
             arcade.play_sound(self.collect_coin_sound)
+            # Add one to the score
+            self.score += 1
 
         # Position the camera
         self.center_camera_to_player()
