@@ -14,6 +14,10 @@ COIN_SCALING = 0.5
 PLAYER_MOVEMENT_SPEED = 5
 GRAVITY = 1
 PLAYER_JUMP_SPEED = 20
+MAX_SPEED = 5.0  # Speed limit
+ACCELERATION_RATE = 0.8 # How fast we accelearte
+FRICTION = 0.8 # How fast to slow down after we let off the key
+
 SPRITE_PIXEL_SIZE = 16
 GRID_PIXEL_SIZE = SPRITE_PIXEL_SIZE * TILE_SCALING
 
@@ -177,32 +181,56 @@ class Game(arcade.Window):
                     self.player.change_y = PLAYER_JUMP_SPEED
                     arcade.play_sound(self.jump_sound)
 
+        # if self.left_pressed and not self.right_pressed:
+        #     self.player.change_x = -PLAYER_MOVEMENT_SPEED
+
+        # elif self.right_pressed and not self.left_pressed:
+        #     self.player.change_x = PLAYER_MOVEMENT_SPEED
+
+        # else:
+        #     self.player.change_x = 0
+
+        # if self.player.change_x > FRICTION:
+        #     self.player.change_x -= FRICTION
+        # elif self.player.change_x < FRICTION:
+        #     self.player.change_x += FRICTION
+        # else:
+        #     self.player.change_x = 0
+
+        # Apply acceleration based on the keys pressed
         if self.left_pressed and not self.right_pressed:
-            self.player.change_x = -PLAYER_MOVEMENT_SPEED
-
+            self.player.change_x += -ACCELERATION_RATE
         elif self.right_pressed and not self.left_pressed:
-            self.player.change_x = PLAYER_MOVEMENT_SPEED
-
+            self.player.change_x += ACCELERATION_RATE
         else:
-            self.player.change_x = 0
+            if self.player.change_x > 0:
+                self.player.change_x -= FRICTION
+                if self.player.change_x < 0:
+                    self.player.change_x = 0
+            elif self.player.change_x < 0:
+                self.player.change_x += FRICTION
+                if self.player.change_x > 0:
+                    self.player.change_x = 0
+        
+        # Ensure player speed does not exceed max speed
+        if self.player.change_x > MAX_SPEED:
+            self.player.change_x = MAX_SPEED
+        elif self.player.change_x < -MAX_SPEED:
+            self.player.change_x = -MAX_SPEED
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed."""
         if key == arcade.key.UP or key == arcade.key.W:
             self.up_pressed = True
-            self.update_player_speed()
 
         elif key == arcade.key.DOWN or key == arcade.key.S:
             self.down_pressed = True
-            self.update_player_speed()
 
         elif key == arcade.key.LEFT or key == arcade.key.A:
             self.left_pressed = True
-            self.update_player_speed()
             
         elif key == arcade.key.RIGHT or key == arcade.key.D:
             self.right_pressed = True
-            self.update_player_speed()
 
         elif key == arcade.key.G:
             self.god_mode = not self.god_mode
@@ -211,19 +239,15 @@ class Game(arcade.Window):
         """Called when the user releases a key."""
         if key == arcade.key.UP or key == arcade.key.W:
             self.up_pressed = False
-            self.update_player_speed()
 
         elif key == arcade.key.DOWN or key == arcade.key.S:
             self.down_pressed = False
-            self.update_player_speed()
 
         elif key == arcade.key.LEFT or key == arcade.key.A:
             self.left_pressed = False
-            self.update_player_speed()
             
         elif key == arcade.key.RIGHT or key == arcade.key.D:
             self.right_pressed = False
-            self.update_player_speed()
 
     def center_camera_to_player(self):
         screen_center_x = self.player.center_x -(self.camera.viewport_width / 2)
@@ -245,7 +269,7 @@ class Game(arcade.Window):
         else:
             self.physics_engine.gravity_constant = GRAVITY
 
-        # Move the player with the physics engine
+        self.update_player_speed()
         self.physics_engine.update()
 
         # See if we hit the coins
@@ -253,21 +277,18 @@ class Game(arcade.Window):
 
         # Loop through each coin if we hit (if any) and remove it
         for coin in coin_hit_list:
-            # Remove the coin
             coin.remove_from_sprite_lists()
-            # Play a sound
             arcade.play_sound(self.collect_coin_sound)
-            # Add one to the score
             self.score += 1
 
-        # Did the player fall of the map?
+        # Did the player fall off the map?
         if self.player.center_y < -100:
             self.player.center_x = PLAYER_START_X
             self.player.center_y = PLAYER_START_Y
 
             arcade.play_sound(self.game_over)
 
-        # Did the player touch something they sould not
+        # Did the player touch something they should not
         if arcade.check_for_collision_with_list(self.player, self.scene[LAYER_NAME_DONT_TOUCH]):
             self.player.change_x = 0
             self.player.change_y = 0
@@ -280,11 +301,9 @@ class Game(arcade.Window):
         if self.player.center_x >= self.end_of_map:
             # Advance to the next level
             self.level += 1
-
             # Load the next level
             self.setup()
 
-        # Position the camera
         self.center_camera_to_player()
         
 
