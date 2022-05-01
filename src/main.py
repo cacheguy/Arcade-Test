@@ -1,4 +1,5 @@
 import arcade
+from arcade import gl
 
 # Constants
 SCREEN_WIDTH = 1000
@@ -26,11 +27,13 @@ PLAYER_START_X = 64
 PLAYER_START_Y = 500
 
 # Layer Names from our TileMap
-LAYER_NAME_PLATFORMS = "Platforms"
-LAYER_NAME_COINS = "Coins"
-LAYER_NAME_FOREGROUND = "Foreground"
-LAYER_NAME_BACKGROUND = "Background"
-LAYER_NAME_DONT_TOUCH = "Don't Touch"
+PLATFORMS_LAYER = "Platforms"
+MOVING_PLATFORMS_LAYER = "Moving Platforms"
+LADDERS_LAYER = "Ladders"
+COINS_LAYER = "Coins"
+FOREGROUND_LAYER = "Foreground"
+BACKGROUND_LAYER = "Background"
+DANGER_LAYER = "Dangers"
 
 class Game(arcade.Window):
     """Main game application."""
@@ -48,6 +51,7 @@ class Game(arcade.Window):
         self.camera = None
         self.gui_camera = None
         self.debug_text_y = 10
+        self.need_jump_reset = True
 
         self.score = 0
         self.level = 1
@@ -81,13 +85,19 @@ class Game(arcade.Window):
 
         # Layer specific options for the tilemap
         layer_options  = {
-            LAYER_NAME_PLATFORMS: {
+            PLATFORMS_LAYER: {
                 "use_spatial_hash": True
             },
-            LAYER_NAME_COINS: {
+            MOVING_PLATFORMS_LAYER: {
+                "use_spatial_hash": False
+            },
+            LADDERS_LAYER: {
                 "use_spatial_hash": True
             },
-            LAYER_NAME_DONT_TOUCH: {
+            COINS_LAYER: {
+                "use_spatial_hash": True
+            },
+            DANGER_LAYER: {
                 "use_spatial_hash": True
             }
         }
@@ -107,7 +117,8 @@ class Game(arcade.Window):
         # Setting before using scene.add_sprite allows us to define where the SpriteList
         # will be in the draw order. If we just use add_sprite, it will be appended to the
         # end of the order.
-        self.scene.add_sprite_list_after("Player", LAYER_NAME_FOREGROUND)
+        #self.scene.add_sprite_list_after("Player", FOREGROUND_LAYER)
+        self.scene.add_sprite_list("Player")
 
         # Set up the player, specifically placing it at these coordinates.
         image_source = "src/assets/images/player.png"
@@ -127,7 +138,11 @@ class Game(arcade.Window):
 
         # Create the physics engine
         self.physics_engine = arcade.PhysicsEnginePlatformer(
-            self.player, gravity_constant=GRAVITY, walls=self.scene[LAYER_NAME_PLATFORMS]
+            self.player, 
+            gravity_constant=GRAVITY, 
+            walls=self.scene[PLATFORMS_LAYER], 
+            platforms=self.scene[MOVING_PLATFORMS_LAYER],
+            ladders=self.scene[LADDERS_LAYER]
         )
 
     def on_draw(self):
@@ -159,6 +174,7 @@ class Game(arcade.Window):
         self.debug_text("Change x", self.player.change_x)
         self.debug_text("Change y", self.player.change_y)
         self.debug_text("Can Jump", self.physics_engine.can_jump())
+        self.debug_text("Reset Jump Key", self.need_jump_reset)
     
     def debug_text(self, item, value):
         text = f"{item}: {value}"
@@ -171,52 +187,59 @@ class Game(arcade.Window):
     def update_player_speed(self):
         """Calculate speed based on the keys pressed."""
         if self.god_mode:
+            # God mode physics
+
+            if self.left_pressed and not self.right_pressed:
+                self.player.change_x = -PLAYER_MOVEMENT_SPEED
+            elif self.right_pressed and not self.left_pressed:
+                self.player.change_x = PLAYER_MOVEMENT_SPEED
+            else:
+                self.player.change_x = 0
+
             if self.up_pressed and not self.down_pressed:
                 self.player.change_y = PLAYER_MOVEMENT_SPEED
             elif self.down_pressed and not self.up_pressed:
                 self.player.change_y = -PLAYER_MOVEMENT_SPEED
+            else:
+                self.player.change_y = 0
         else:
-            if self.up_pressed:
-                if self.physics_engine.can_jump():
+            if not self.up_pressed and self.physics_engine.can_jump():
+                self.need_jump_reset = False
+
+            if self.physics_engine.is_on_ladder():
+                if self.up_pressed and not self.down_pressed:
+                    self.player.change_y = PLAYER_MOVEMENT_SPEED
+                elif self.down_pressed and not self.up_pressed:
+                    self.player.change_y = -PLAYER_MOVEMENT_SPEED
+                else:
+                    self.player.change_y = 0
+
+            elif self.physics_engine.can_jump() and not self.need_jump_reset:
+                if self.up_pressed:
                     self.player.change_y = PLAYER_JUMP_SPEED
                     arcade.play_sound(self.jump_sound)
+                    self.need_jump_reset = True
 
-        # if self.left_pressed and not self.right_pressed:
-        #     self.player.change_x = -PLAYER_MOVEMENT_SPEED
-
-        # elif self.right_pressed and not self.left_pressed:
-        #     self.player.change_x = PLAYER_MOVEMENT_SPEED
-
-        # else:
-        #     self.player.change_x = 0
-
-        # if self.player.change_x > FRICTION:
-        #     self.player.change_x -= FRICTION
-        # elif self.player.change_x < FRICTION:
-        #     self.player.change_x += FRICTION
-        # else:
-        #     self.player.change_x = 0
-
-        # Apply acceleration based on the keys pressed
-        if self.left_pressed and not self.right_pressed:
-            self.player.change_x += -ACCELERATION_RATE
-        elif self.right_pressed and not self.left_pressed:
-            self.player.change_x += ACCELERATION_RATE
-        else:
-            if self.player.change_x > 0:
-                self.player.change_x -= FRICTION
-                if self.player.change_x < 0:
-                    self.player.change_x = 0
-            elif self.player.change_x < 0:
-                self.player.change_x += FRICTION
+            # Apply acceleration based on the keys pressed
+            if self.left_pressed and not self.right_pressed:
+                self.player.change_x += -ACCELERATION_RATE
+            elif self.right_pressed and not self.left_pressed:
+                self.player.change_x += ACCELERATION_RATE
+            else:
                 if self.player.change_x > 0:
-                    self.player.change_x = 0
-        
-        # Ensure player speed does not exceed max speed
-        if self.player.change_x > MAX_SPEED:
-            self.player.change_x = MAX_SPEED
-        elif self.player.change_x < -MAX_SPEED:
-            self.player.change_x = -MAX_SPEED
+                    self.player.change_x -= FRICTION
+                    if self.player.change_x < 0:
+                        self.player.change_x = 0
+                elif self.player.change_x < 0:
+                    self.player.change_x += FRICTION
+                    if self.player.change_x > 0:
+                        self.player.change_x = 0
+            
+            # Ensure player speed does not exceed max speed
+            if self.player.change_x > MAX_SPEED:
+                self.player.change_x = MAX_SPEED
+            elif self.player.change_x < -MAX_SPEED:
+                self.player.change_x = -MAX_SPEED
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed."""
@@ -234,6 +257,9 @@ class Game(arcade.Window):
 
         elif key == arcade.key.G:
             self.god_mode = not self.god_mode
+
+        elif key == arcade.key.Q:
+            arcade.exit()
 
     def on_key_release(self, key, modifers):
         """Called when the user releases a key."""
@@ -289,7 +315,7 @@ class Game(arcade.Window):
             arcade.play_sound(self.game_over)
 
         # Did the player touch something they should not
-        if arcade.check_for_collision_with_list(self.player, self.scene[LAYER_NAME_DONT_TOUCH]):
+        if arcade.check_for_collision_with_list(self.player, self.scene[DANGER_LAYER]):
             self.player.change_x = 0
             self.player.change_y = 0
             self.player.center_x = PLAYER_START_X

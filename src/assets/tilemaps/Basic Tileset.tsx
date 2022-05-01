@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.8.4" name="Basic Tileset" tilewidth="16" tileheight="16" tilecount="9" columns="0">
+<tileset version="1.8" tiledversion="1.8.4" name="Basic Tileset" tilewidth="16" tileheight="16" tilecount="11" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="6">
   <image width="16" height="16" source="../images/tiles/brick.png"/>
@@ -25,7 +25,13 @@
  <tile id="13">
   <image width="16" height="16" source="../images/tiles/ladder.png"/>
  </tile>
- <tile id="14">
-  <image width="16" height="16" source="../images/tiles/lava.png"/>
+ <tile id="15">
+  <image width="16" height="16" source="../images/tiles/lava_middle.png"/>
+ </tile>
+ <tile id="16">
+  <image width="16" height="16" source="../images/tiles/lava_top.png"/>
+ </tile>
+ <tile id="17">
+  <image width="16" height="16" source="../images/tiles/gold_coin.png"/>
  </tile>
 </tileset>
