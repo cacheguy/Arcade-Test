@@ -5,6 +5,7 @@ from arcade import gl
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 650
 SCREEN_TITLE = "Platformer"
+TARGET_FPS = 60
 
 # Constants used to scale our sprites from their original size
 CHARACTER_SCALING = 4
@@ -14,10 +15,11 @@ COIN_SCALING = 0.5
 # Movement speed of player, in pixels per frame
 PLAYER_MOVEMENT_SPEED = 5
 GRAVITY = 1
-PLAYER_JUMP_SPEED = 20
-MAX_SPEED = 5.0  # Speed limit
+PLAYER_JUMP_SPEED = 15
+MAX_SPEED = 5  # Speed limit
 ACCELERATION_RATE = 0.8 # How fast we accelearte
 FRICTION = 0.8 # How fast to slow down after we let off the key
+MAX_JUMP_COUNT = 5
 
 SPRITE_PIXEL_SIZE = 16
 GRID_PIXEL_SIZE = SPRITE_PIXEL_SIZE * TILE_SCALING
@@ -35,6 +37,7 @@ FOREGROUND_LAYER = "Foreground"
 BACKGROUND_LAYER = "Background"
 DANGER_LAYER = "Dangers"
 
+
 class Game(arcade.Window):
     """Main game application."""
 
@@ -42,7 +45,7 @@ class Game(arcade.Window):
         """Initialize the game"""
 
         # Call the parent class and set up the window
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, center_window=True)
 
         self.tilemap = None
         self.scene = None
@@ -51,7 +54,7 @@ class Game(arcade.Window):
         self.camera = None
         self.gui_camera = None
         self.debug_text_y = 10
-        self.need_jump_reset = True
+        self.jump_count = 0
 
         self.score = 0
         self.level = 1
@@ -174,7 +177,7 @@ class Game(arcade.Window):
         self.debug_text("Change x", self.player.change_x)
         self.debug_text("Change y", self.player.change_y)
         self.debug_text("Can Jump", self.physics_engine.can_jump())
-        self.debug_text("Reset Jump Key", self.need_jump_reset)
+        self.debug_text("Jump Count", self.jump_count)
     
     def debug_text(self, item, value):
         text = f"{item}: {value}"
@@ -203,8 +206,8 @@ class Game(arcade.Window):
             else:
                 self.player.change_y = 0
         else:
-            if not self.up_pressed and self.physics_engine.can_jump():
-                self.need_jump_reset = False
+            if self.physics_engine.can_jump() and not self.up_pressed:
+                self.jump_count = 0
 
             if self.physics_engine.is_on_ladder():
                 if self.up_pressed and not self.down_pressed:
@@ -214,11 +217,14 @@ class Game(arcade.Window):
                 else:
                     self.player.change_y = 0
 
-            elif self.physics_engine.can_jump() and not self.need_jump_reset:
-                if self.up_pressed:
-                    self.player.change_y = PLAYER_JUMP_SPEED
+            elif (self.physics_engine.can_jump() or self.jump_count > 0) \
+                 and self.jump_count < MAX_JUMP_COUNT \
+                 and self.up_pressed:
+                self.player.change_y = PLAYER_JUMP_SPEED
+                self.jump_count += 1
+                if self.jump_count == 1:
                     arcade.play_sound(self.jump_sound)
-                    self.need_jump_reset = True
+            
 
             # Apply acceleration based on the keys pressed
             if self.left_pressed and not self.right_pressed:
@@ -288,6 +294,7 @@ class Game(arcade.Window):
 
     def on_update(self, delta_time):
         """Movement and game logic."""
+        self.dt = delta_time * TARGET_FPS
 
         # If god mode is enabled, set gravity to 0. This will allow the player to fly around.
         if self.god_mode:
