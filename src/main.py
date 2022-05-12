@@ -1,5 +1,5 @@
 import arcade
-from arcade import gl
+import pyglet
 
 # Constants
 SCREEN_WIDTH = 1000
@@ -19,7 +19,7 @@ PLAYER_JUMP_SPEED = 15
 MAX_SPEED = 5  # Speed limit
 ACCELERATION_RATE = 0.8 # How fast we accelearte
 FRICTION = 0.8 # How fast to slow down after we let off the key
-MAX_JUMP_COUNT = 5
+MAX_JUMP_COUNT = 10
 
 SPRITE_PIXEL_SIZE = 16
 GRID_PIXEL_SIZE = SPRITE_PIXEL_SIZE * TILE_SCALING
@@ -38,6 +38,13 @@ BACKGROUND_LAYER = "Background"
 DANGER_LAYER = "Dangers"
 
 
+def load_texture_pair(filename):
+    return [
+        arcade.load_texture(file_name=filename),
+        arcade.load_texture(file_name=filename, flipped_horizontally=True)
+    ]
+
+
 class Game(arcade.Window):
     """Main game application."""
 
@@ -47,6 +54,8 @@ class Game(arcade.Window):
         # Call the parent class and set up the window
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, center_window=True)
 
+        self.dt = 0
+        self.fps = 0
         self.tilemap = None
         self.scene = None
         self.player = None
@@ -69,9 +78,10 @@ class Game(arcade.Window):
         self.end_of_map = 0
 
         # Load sounds
-        self.collect_coin_sound = arcade.load_sound(":resources:sounds/coin1.wav")
-        self.jump_sound = arcade.load_sound(":resources:sounds/jump1.wav")
-        self.game_over = arcade.load_sound(":resources:sounds/gameover1.wav")
+        resolve = arcade.resources.resolve_resource_path  # Just to make the function name shorter
+        self.collect_coin_sound = pyglet.media.load(resolve(":resources:sounds/coin1.wav"), streaming=False)
+        self.jump_sound = pyglet.media.load(resolve(":resources:sounds/jump1.wav"), streaming=False)
+        self.game_over_sound = pyglet.media.load(resolve(":resources:sounds/gameover1.wav"), streaming=False)
 
         arcade.enable_timings()
 
@@ -83,7 +93,6 @@ class Game(arcade.Window):
         self.gui_camera = arcade.Camera(self.width, self.height)
         
         # Map name 
-        # map_name = f":resources:tiled_maps/map2_level_{self.level}.json"\
         map_name = r"src\assets\tilemaps\Basic Tilemap.tmx"
 
         # Layer specific options for the tilemap
@@ -115,12 +124,6 @@ class Game(arcade.Window):
         # Keep track of the score
         self.score = 0
 
-        # Add Player Spritelist before "Foreground" layer. This will make the foreground
-        # be drawn after the player, making it appear to be in front of the Player.
-        # Setting before using scene.add_sprite allows us to define where the SpriteList
-        # will be in the draw order. If we just use add_sprite, it will be appended to the
-        # end of the order.
-        #self.scene.add_sprite_list_after("Player", FOREGROUND_LAYER)
         self.scene.add_sprite_list("Player")
 
         # Set up the player, specifically placing it at these coordinates.
@@ -167,15 +170,17 @@ class Game(arcade.Window):
         # Also draw some debug stuff
         self.reset_debug_text()
         self.debug_text("Score", self.score)
-        self.debug_text("FPS", arcade.get_fps())
+        self.debug_text("FPS", self.fps)
         self.debug_text("God Mode", self.god_mode)
 
         self.debug_text("Right Key", self.right_pressed)
         self.debug_text("Left Key", self.left_pressed)
         self.debug_text("Up Key", self.up_pressed)
         self.debug_text("Down Key", self.down_pressed)
-        self.debug_text("Change x", self.player.change_x)
+        self.debug_text("Player y", self.player.center_y)
+        self.debug_text("Player x", self.player.center_x)
         self.debug_text("Change y", self.player.change_y)
+        self.debug_text("Change x", self.player.change_x)
         self.debug_text("Can Jump", self.physics_engine.can_jump())
         self.debug_text("Jump Count", self.jump_count)
     
@@ -223,9 +228,8 @@ class Game(arcade.Window):
                 self.player.change_y = PLAYER_JUMP_SPEED
                 self.jump_count += 1
                 if self.jump_count == 1:
-                    arcade.play_sound(self.jump_sound)
+                    self.jump_sound.play()
             
-
             # Apply acceleration based on the keys pressed
             if self.left_pressed and not self.right_pressed:
                 self.player.change_x += -ACCELERATION_RATE
@@ -282,19 +286,26 @@ class Game(arcade.Window):
             self.right_pressed = False
 
     def center_camera_to_player(self):
-        screen_center_x = self.player.center_x -(self.camera.viewport_width / 2)
-        screen_center_y = self.player.center_y - (self.camera.viewport_height / 2)
+        screen_center_x = self.player.center_x - self.camera.viewport_width / 2
+        screen_center_y = self.player.center_y - self.camera.viewport_height / 2
 
         # Dont let camera travel past 0
         # if screen_center_x < 0: screen_center_x = 0
-        if screen_center_y < 0: screen_center_y = 0
+        # if screen_center_y < 0: screen_center_y = 0
         player_centered = screen_center_x, screen_center_y
 
-        self.camera.move_to(player_centered)
+        self.camera.move_to(player_centered, speed=0.2)
+
+    def kill_player(self):
+        self.player.stop()
+        self.player.center_x = PLAYER_START_X
+        self.player.center_y = PLAYER_START_Y
+        self.game_over_sound.play()
 
     def on_update(self, delta_time):
         """Movement and game logic."""
         self.dt = delta_time * TARGET_FPS
+        self.fps = 1 / delta_time
 
         # If god mode is enabled, set gravity to 0. This will allow the player to fly around.
         if self.god_mode:
@@ -308,27 +319,18 @@ class Game(arcade.Window):
         # See if we hit the coins
         coin_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Coins"])
 
+        if coin_hit_list:
+            self.collect_coin_sound.play()
+            
         # Loop through each coin if we hit (if any) and remove it
         for coin in coin_hit_list:
             coin.remove_from_sprite_lists()
-            arcade.play_sound(self.collect_coin_sound)
             self.score += 1
 
-        # Did the player fall off the map?
-        if self.player.center_y < -100:
-            self.player.center_x = PLAYER_START_X
-            self.player.center_y = PLAYER_START_Y
-
-            arcade.play_sound(self.game_over)
-
-        # Did the player touch something they should not
-        if arcade.check_for_collision_with_list(self.player, self.scene[DANGER_LAYER]):
-            self.player.change_x = 0
-            self.player.change_y = 0
-            self.player.center_x = PLAYER_START_X
-            self.player.center_y = PLAYER_START_Y
-
-            arcade.play_sound(self.game_over)
+        # Did the player touch something they should not?
+        if arcade.check_for_collision_with_list(self.player, self.scene[DANGER_LAYER]) \
+           or self.player.center_y < -100:  # Did the player fall off the map?
+            self.kill_player()
 
         # See if the user got to the end of the level
         if self.player.center_x >= self.end_of_map:
@@ -338,6 +340,8 @@ class Game(arcade.Window):
             self.setup()
 
         self.center_camera_to_player()
+        pyglet.clock.tick()
+        pyglet.app.platform_event_loop.dispatch_posted_events()
         
 
 def main():
