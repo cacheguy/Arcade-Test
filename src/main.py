@@ -1,6 +1,7 @@
 import arcade
-import pyglet
-from random import randint
+from pyglet import clock
+
+from player import PlayerSprite
 
 # Constants
 SCREEN_WIDTH = 1000
@@ -41,14 +42,6 @@ DANGER_LAYER = "Dangers"
 GOAL_LAYER = "Goal"
 
 
-def load_texture_pair(filename):
-    """Load two textures from the filename, the first texture NOT flipped, the second texture flipped"""
-    return [
-        arcade.load_texture(file_name=filename),
-        arcade.load_texture(file_name=filename, flipped_horizontally=True)
-    ]
-
-
 class Game(arcade.Window):
     """Main game application."""
 
@@ -83,16 +76,10 @@ class Game(arcade.Window):
         self.end_of_map = 0
 
         # Load sounds
-        self.collect_coin_sound = self.load_sound(":resources:sounds/coin1.wav")
-        self.jump_sound = self.load_sound(":resources:sounds/jump1.wav")
-        self.game_over_sound = self.load_sound(":resources:sounds/gameover1.wav")
-        self.goal_sound = self.load_sound(":resources:sounds/upgrade4.wav")
-
-        arcade.enable_timings()
-
-    @staticmethod
-    def load_sound(path):
-        return pyglet.media.load(arcade.resources.resolve_resource_path(path), streaming=False)
+        self.collect_coin_sound = arcade.load_sound(":resources:sounds/coin1.wav")
+        self.jump_sound = arcade.load_sound(":resources:sounds/jump1.wav")
+        self.game_over_sound = arcade.load_sound(":resources:sounds/gameover1.wav")
+        self.goal_sound = arcade.load_sound(":resources:sounds/upgrade4.wav")
 
     def setup(self):
         """Set up the game here. Call this method to restart the game."""
@@ -140,7 +127,7 @@ class Game(arcade.Window):
 
         # Set up the player, specifically placing it at these coordinates.
         image_source = "src/assets/images/player.png"
-        self.player = arcade.Sprite(image_source, CHARACTER_SCALING)
+        self.player = PlayerSprite()
         self.player.center_x = PLAYER_START_X
         self.player.center_y = PLAYER_START_Y
         self.scene.add_sprite("Player", self.player)
@@ -347,6 +334,23 @@ class Game(arcade.Window):
         self.update_player_speed()
         self.physics_engine.update()
 
+        # Update player's animations
+        if self.physics_engine.can_jump():
+            self.player.can_jump = False
+        else:
+            self.player.can_jump = True
+
+        if self.physics_engine.is_on_ladder() and not self.physics_engine.can_jump():
+            self.player.is_on_ladder = True
+        else:
+            self.player.is_on_ladder = False
+
+        # Update all animations in the scene
+        self.scene.update_animation(self.dt)
+
+        # Update walls, used with moving platofmrs
+        self.scene.update([MOVING_PLATFORMS_LAYER])
+
         # See if we hit the coins
         coin_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Coins"])
 
@@ -373,8 +377,7 @@ class Game(arcade.Window):
             self.goal_sound.play()
 
         self.center_camera_to_player(camera_speed=CAMERA_SPEED)
-        pyglet.clock.tick()
-        pyglet.app.platform_event_loop.dispatch_posted_events()
+        clock.tick()
         
 
 def main():
