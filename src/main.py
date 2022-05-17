@@ -1,7 +1,10 @@
 import arcade
 from pyglet import clock
+from time import sleep
 
 from player import PlayerSprite
+
+# TODO Update all libraries (especially arcade)
 
 # Constants
 SCREEN_WIDTH = 1000
@@ -20,8 +23,8 @@ PLAYER_MOVEMENT_SPEED = 5
 GRAVITY = 1
 PLAYER_JUMP_SPEED = 15
 MAX_SPEED = 5  # Speed limit
-ACCELERATION_RATE = 0.8 # How fast we accelearte
-FRICTION = 0.8 # How fast to slow down after we let off the key
+ACCELERATION_RATE = 0.8  # How fast we accelearte
+FRICTION = 0.8  # How fast to slow down after we let off the key
 MAX_JUMP_COUNT = 8
 
 SPRITE_PIXEL_SIZE = 16
@@ -182,6 +185,7 @@ class Game(arcade.Window):
         self.debug_text("Change x", self.player.change_x)
         self.debug_text("Can Jump", self.physics_engine.can_jump())
         self.debug_text("Jump Count", self.jump_count)
+        self.debug_text("Velocity", self.player.velocity)
     
     def debug_text(self, item, value):
         """Adds debug text to the top of the previous debug text."""
@@ -196,21 +200,7 @@ class Game(arcade.Window):
     def update_player_speed(self):
         """Handle the player's movement based on the pressed keys."""
         if self.god_mode:
-            # God mode physics
-
-            if self.left_pressed and not self.right_pressed:
-                self.player.change_x = -PLAYER_MOVEMENT_SPEED
-            elif self.right_pressed and not self.left_pressed:
-                self.player.change_x = PLAYER_MOVEMENT_SPEED
-            else:
-                self.player.change_x = 0
-
-            if self.up_pressed and not self.down_pressed:
-                self.player.change_y = PLAYER_MOVEMENT_SPEED
-            elif self.down_pressed and not self.up_pressed:
-                self.player.change_y = -PLAYER_MOVEMENT_SPEED
-            else:
-                self.player.change_y = 0
+            self.update_god_mode_physics()
         else:
             if self.physics_engine.can_jump() and not self.up_pressed:
                 self.jump_count = 0
@@ -252,6 +242,24 @@ class Game(arcade.Window):
                 self.player.change_x = MAX_SPEED
             elif self.player.change_x < -MAX_SPEED:
                 self.player.change_x = -MAX_SPEED
+
+    def update_god_mode_physics(self):
+        """God mode physics"""
+
+        if self.left_pressed and not self.right_pressed:
+            self.player.change_x = -PLAYER_MOVEMENT_SPEED
+        elif self.right_pressed and not self.left_pressed:
+            self.player.change_x = PLAYER_MOVEMENT_SPEED
+        else:
+            self.player.change_x = 0
+
+        if self.up_pressed and not self.down_pressed:
+            self.player.change_y = PLAYER_MOVEMENT_SPEED
+        elif self.down_pressed and not self.up_pressed:
+            self.player.change_y = -PLAYER_MOVEMENT_SPEED
+        else:
+            self.player.change_y = 0
+        
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed."""
@@ -334,16 +342,15 @@ class Game(arcade.Window):
         self.update_player_speed()
         self.physics_engine.update()
 
-        # Update player's animations
-        if self.physics_engine.can_jump():
-            self.player.can_jump = False
-        else:
-            self.player.can_jump = True
-
-        if self.physics_engine.is_on_ladder() and not self.physics_engine.can_jump():
-            self.player.is_on_ladder = True
-        else:
-            self.player.is_on_ladder = False
+        
+        self.player.set_physics_state(
+            is_on_ladder=self.physics_engine.is_on_ladder(),
+            can_jump=self.physics_engine.can_jump(),
+            up_pressed=self.up_pressed,
+            down_pressed=self.down_pressed,
+            right_pressed=self.right_pressed,
+            left_pressed=self.left_pressed
+        )
 
         # Update all animations in the scene
         self.scene.update_animation(self.dt)
@@ -351,14 +358,12 @@ class Game(arcade.Window):
         # Update walls, used with moving platofmrs
         self.scene.update([MOVING_PLATFORMS_LAYER])
 
-        # See if we hit the coins
         coin_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Coins"])
 
         # Better to do this than to play a sound for every single coin
         if coin_hit_list:
             self.collect_coin_sound.play()
             
-        # Loop through each coin if we hit (if any) and remove it.
         for coin in coin_hit_list:
             coin.remove_from_sprite_lists()
             self.score += 1
