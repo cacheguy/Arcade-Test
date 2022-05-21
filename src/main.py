@@ -1,8 +1,9 @@
 import arcade
 from pyglet import clock
 from time import sleep
+from math import floor
 
-from player import PlayerSprite
+from player import PlayerSprite, RobotEnemySprite
 
 # TODO Update all libraries (especially arcade)
 
@@ -23,8 +24,8 @@ PLAYER_MOVEMENT_SPEED = 5
 GRAVITY = 1
 PLAYER_JUMP_SPEED = 15
 MAX_SPEED = 5  # Speed limit
-ACCELERATION_RATE = 0.8  # How fast we accelearte
-FRICTION = 0.8  # How fast to slow down after we let off the key
+ACCELERATION_RATE = 0.7  # How fast we accelearte
+FRICTION = 0.7  # How fast to slow down after we let off the key
 MAX_JUMP_COUNT = 8
 
 SPRITE_PIXEL_SIZE = 16
@@ -43,6 +44,7 @@ COINS_LAYER = "Coins"
 #BACKGROUND_LAYER = "Background"
 DANGER_LAYER = "Dangers"
 GOAL_LAYER = "Goal"
+ENEMIES_LAYER = "Enemies"
 
 
 class Game(arcade.Window):
@@ -92,7 +94,7 @@ class Game(arcade.Window):
         self.gui_camera = arcade.Camera(self.width, self.height)
         
         # Map name 
-        map_name = r"src\assets\tilemaps\Basic Tilemap.tmx"
+        map_name = r"src\assets\tilemaps\Basic Tilemap2.tmx"
 
         # Layer specific options for the tilemap
         layer_options  = {
@@ -113,6 +115,9 @@ class Game(arcade.Window):
             },
             GOAL_LAYER: {
                 "use_spatial_hash": True
+            },
+            ENEMIES_LAYER: {
+                "use_spatial_hash": False
             }
         }
 
@@ -129,7 +134,6 @@ class Game(arcade.Window):
         self.scene.add_sprite_list("Player")
 
         # Set up the player, specifically placing it at these coordinates.
-        image_source = "src/assets/images/player.png"
         self.player = PlayerSprite()
         self.player.center_x = PLAYER_START_X
         self.player.center_y = PLAYER_START_Y
@@ -139,6 +143,26 @@ class Game(arcade.Window):
 
         # Calculate the right edge of the my_map in pixels
         self.end_of_map = self.tile_map.width * GRID_PIXEL_SIZE
+
+        # -- Enemies
+        enemies_layer = self.tile_map.object_lists[ENEMIES_LAYER]
+
+        for my_object in enemies_layer:
+            cartesian = self.tile_map.get_cartesian(
+                my_object.shape[0], my_object.shape[1]
+            )
+            enemy_type = my_object.properties["type"]
+            if enemy_type == "robot":
+                enemy = RobotEnemySprite()
+            else:
+                raise Exception(f"Unknown enemy type {enemy_type}.")
+            enemy.center_x = floor(
+                cartesian[0] * TILE_SCALING * self.tile_map.tile_width
+            )
+            enemy.center_y = floor(
+                (cartesian[1] + 1) * (self.tile_map.tile_height * TILE_SCALING)
+            )
+            self.scene.add_sprite(ENEMIES_LAYER, enemy)
 
         # Set the background color
         if self.tile_map.background_color:
@@ -185,7 +209,7 @@ class Game(arcade.Window):
         self.debug_text("Change x", self.player.change_x)
         self.debug_text("Can Jump", self.physics_engine.can_jump())
         self.debug_text("Jump Count", self.jump_count)
-        self.debug_text("Velocity", self.player.velocity)
+        self.debug_text("Collided", self.player.collides_with_list(self.scene[PLATFORMS_LAYER]))
     
     def debug_text(self, item, value):
         """Adds debug text to the top of the previous debug text."""

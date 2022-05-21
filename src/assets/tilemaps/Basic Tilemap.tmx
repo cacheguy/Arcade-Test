@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.8" tiledversion="1.8.4" orientation="orthogonal" renderorder="right-down" width="45" height="35" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#87ceeb" nextlayerid="9" nextobjectid="1">
+<map version="1.8" tiledversion="1.8.4" orientation="orthogonal" renderorder="right-down" width="45" height="35" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#87ceeb" nextlayerid="11" nextobjectid="5">
  <tileset firstgid="1" source="Basic Tileset.tsx"/>
+ <objectgroup id="10" name="Enemies"/>
  <layer id="4" name="Coins" width="45" height="35">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

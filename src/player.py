@@ -1,3 +1,4 @@
+from email.mime import image
 import arcade
 from math import floor
 
@@ -49,6 +50,7 @@ class Animation():
             current_frame = self.frames[floor(self.frame_num)]
         return current_frame
 
+
 class WalkingAnimation(Animation):
     def __init__(self, frames, max_player_speed=5, speed=0.25, use_right_left=True):
         super().__init__(frames=frames, speed=speed, use_right_left=use_right_left)
@@ -57,35 +59,18 @@ class WalkingAnimation(Animation):
     def update(self, player_speed, delta_time):
         self.frame_num += abs((self.speed * (player_speed / self.max_player_speed)))
 
-
-class PlayerSprite(arcade.Sprite):
-    def __init__(self, physics_engine=None):
+    
+class Entity(arcade.Sprite):
+    def __init__(self, images_path):
         super().__init__()
 
         self.face_direction = RIGHT_FACING
-        self.physics_engine = physics_engine
-
-        # Used for flipping between image sequences
-        self.cur_texture = 0
         self.scale = CHARACTER_SCALING
-
-        # Track our state
-        self.jumping = False
-        self.climbing = False
-        self.is_on_ladder = False
+        self.state = "idle"
 
         # ---- Load Textures ----
 
-        main_path = r"src\assets\images\player"
-
-        self.idle_texture_pair = load_texture_pair(f"{main_path}/idle1.png")
-        self.jump_texture_pair = load_texture_pair(f"{main_path}/jump1.png")
-        self.fall_texture_pair = load_texture_pair(f"{main_path}/fall1.png")
-        self.walk_textures = [load_texture_pair(f"{main_path}/walk{i+1}.png") for i in range(8)]
-        self.climb_textures = [arcade.load_texture(f"{main_path}/climb{i+1}.png") for i in range(4)]
-
-        self.walk_anim = WalkingAnimation(self.walk_textures)
-        self.climb_anim = Animation(self.climb_textures, use_right_left=False)
+        self.idle_texture_pair = load_texture_pair(f"{images_path}/idle1.png")
 
         # Set the initial texture
         self.texture = self.idle_texture_pair[0]
@@ -93,7 +78,51 @@ class PlayerSprite(arcade.Sprite):
         # Hit box will be set based on the first image used.
         self.hit_box = self.texture.hit_box_points
 
-        self.state = "idle"
+
+    def on_update(self, delta_time):
+        self.dt = delta_time
+        self.position = [
+            self._position[0] + self.change_x,
+            self._position[1] + self.change_y,
+        ]
+        self.angle += self.change_angle
+
+
+class EnemySprite(Entity):
+    pass
+
+class RobotEnemySprite(EnemySprite):
+    def __init__(self):
+        images_path = "src/assets/images/robot"
+        super().__init__(images_path)
+        self.fall_texture_pair = load_texture_pair(f"{images_path}/fall1.png")
+        self.walk_textures = [load_texture_pair(f"{images_path}/walk{i+1}.png") for i in range(8)]
+
+        self.walk_anim = WalkingAnimation(self.walk_textures)
+
+
+class PlayerSprite(Entity):
+    def __init__(self):
+        images_path = "src/assets/images/player"
+        super().__init__(images_path)
+
+        self.jump_texture_pair = load_texture_pair(f"{images_path}/jump1.png")
+        self.fall_texture_pair = load_texture_pair(f"{images_path}/fall1.png")
+        self.walk_textures = [load_texture_pair(f"{images_path}/walk{i+1}.png") for i in range(8)]
+        self.climb_textures = [arcade.load_texture(f"{images_path}/climb{i+1}.png") for i in range(4)]
+
+        self.walk_anim = WalkingAnimation(self.walk_textures)
+        self.climb_anim = Animation(self.climb_textures, use_right_left=False)
+
+        # Set default physic states
+        self.set_physics_state(
+            is_on_ladder=False,
+            can_jump=False,
+            up_pressed=False,
+            down_pressed=False,
+            right_pressed=False,
+            left_pressed=False
+        )
 
     def set_physics_state(self, is_on_ladder, can_jump, up_pressed, down_pressed, right_pressed, left_pressed):
         self.is_on_ladder = is_on_ladder
@@ -159,12 +188,3 @@ class PlayerSprite(arcade.Sprite):
             # If the player is moving, update the climbing animation, to make the player climb.
             if (abs(self.change_x) > 0) or (abs(self.change_y) > 0):
                 self.climb_anim.update(self.dt)
-            
-
-    def on_update(self, delta_time):
-        self.dt = delta_time
-        self.position = [
-            self._position[0] + self.change_x,
-            self._position[1] + self.change_y,
-        ]
-        self.angle += self.change_angle
