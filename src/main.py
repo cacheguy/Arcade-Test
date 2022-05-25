@@ -47,6 +47,9 @@ GOAL_LAYER = "Goal"
 ENEMIES_LAYER = "Enemies"
 
 
+class UknownEnemyError(Exception): pass
+
+
 class Game(arcade.Window):
     """Main game application."""
 
@@ -64,6 +67,7 @@ class Game(arcade.Window):
         self.physics_engine = None
         self.camera = None
         self.gui_camera = None
+        self.draw_debug_text = False
         self.debug_text_y = 10
         self.jump_count = 0
         self.moved_camera = False
@@ -85,6 +89,8 @@ class Game(arcade.Window):
         self.jump_sound = arcade.load_sound(":resources:sounds/jump1.wav")
         self.game_over_sound = arcade.load_sound(":resources:sounds/gameover1.wav")
         self.goal_sound = arcade.load_sound(":resources:sounds/upgrade4.wav")
+
+        #self.set_update_rate(1/500)
 
     def setup(self):
         """Set up the game here. Call this method to restart the game."""
@@ -147,21 +153,24 @@ class Game(arcade.Window):
         # -- Enemies
         enemies_layer = self.tile_map.object_lists[ENEMIES_LAYER]
 
-        for my_object in enemies_layer:
-            cartesian = self.tile_map.get_cartesian(
-                my_object.shape[0], my_object.shape[1]
-            )
-            enemy_type = my_object.properties["type"]
+        for enemy_object in enemies_layer:
+            cartesian = self.tile_map.get_cartesian(*enemy_object.shape)
+            enemy_type = enemy_object.properties["type"]
             if enemy_type == "robot":
                 enemy = RobotEnemySprite()
             else:
-                raise Exception(f"Unknown enemy type {enemy_type}.")
-            enemy.center_x = floor(
-                cartesian[0] * TILE_SCALING * self.tile_map.tile_width
-            )
-            enemy.center_y = floor(
-                (cartesian[1] + 1) * (self.tile_map.tile_height * TILE_SCALING)
-            )
+                raise UknownEnemyError(f"Unknown enemy type: {enemy_type}.")
+
+            enemy.center_x = floor(cartesian[0] * self.tile_map.tile_width * TILE_SCALING)
+            enemy.center_y = floor((cartesian[1] + 1) * self.tile_map.tile_height * TILE_SCALING)
+
+            if "boundary_left" in enemy_object.properties:
+                enemy.boundary_left = enemy_object.properties["boundary_left"] * TILE_SCALING
+            if "boundary_right" in enemy_object.properties:
+                enemy.boundary_right = enemy_object.properties["boundary_right"] * TILE_SCALING
+            if "change_x" in enemy_object.properties:
+                enemy.change_x = enemy_object.properties["change_x"]
+
             self.scene.add_sprite(ENEMIES_LAYER, enemy)
 
         # Set the background color
@@ -195,21 +204,21 @@ class Game(arcade.Window):
         # Draw our score on the screen, scrolling it with the viewport
         # Also draw some debug stuff
         self.reset_debug_text()
-        self.debug_text("Score", self.score)
         self.debug_text("FPS", self.fps)
-        self.debug_text("God Mode", self.god_mode)
+        if self.draw_debug_text:
+            self.debug_text("Score", self.score)
+            self.debug_text("God Mode", self.god_mode)
 
-        self.debug_text("Right Key", self.right_pressed)
-        self.debug_text("Left Key", self.left_pressed)
-        self.debug_text("Up Key", self.up_pressed)
-        self.debug_text("Down Key", self.down_pressed)
-        self.debug_text("Player y", self.player.center_y)
-        self.debug_text("Player x", self.player.center_x)
-        self.debug_text("Change y", self.player.change_y)
-        self.debug_text("Change x", self.player.change_x)
-        self.debug_text("Can Jump", self.physics_engine.can_jump())
-        self.debug_text("Jump Count", self.jump_count)
-        self.debug_text("Collided", self.player.collides_with_list(self.scene[PLATFORMS_LAYER]))
+            self.debug_text("Right Key", self.right_pressed)
+            self.debug_text("Left Key", self.left_pressed)
+            self.debug_text("Up Key", self.up_pressed)
+            self.debug_text("Down Key", self.down_pressed)
+            self.debug_text("Player y", self.player.center_y)
+            self.debug_text("Player x", self.player.center_x)
+            self.debug_text("Change y", self.player.change_y)
+            self.debug_text("Change x", self.player.change_x)
+            self.debug_text("Can Jump", self.physics_engine.can_jump())
+            self.debug_text("Jump Count", self.jump_count)
     
     def debug_text(self, item, value):
         """Adds debug text to the top of the previous debug text."""
@@ -302,6 +311,9 @@ class Game(arcade.Window):
         elif key == arcade.key.G:
             self.god_mode = not self.god_mode
 
+        elif key == arcade.key.F:
+            self.draw_debug_text = not self.draw_debug_text
+
         elif key == arcade.key.Q:
             arcade.exit()
 
@@ -380,7 +392,18 @@ class Game(arcade.Window):
         self.scene.update_animation(self.dt)
 
         # Update walls, used with moving platofmrs
-        self.scene.update([MOVING_PLATFORMS_LAYER])
+        self.scene.update([MOVING_PLATFORMS_LAYER, ENEMIES_LAYER])
+
+        for enemy in self.scene[ENEMIES_LAYER]:
+            if (enemy.boundary_right and enemy.right > enemy.boundary_right and enemy.change_x > 0):
+                enemy.change_x *= -1
+
+            if (enemy.boundary_left and enemy.left < enemy.boundary_left and enemy.change_x < 0):
+                enemy.change_x *= -1
+
+            enemy.change_y -= GRAVITY
+            solid_platforms = [self.scene[PLATFORMS_LAYER], self.scene[MOVING_PLATFORMS_LAYER]]
+            arcade.physics_engines._move_sprite(enemy, solid_platforms, ramp_up=True)
 
         coin_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Coins"])
 

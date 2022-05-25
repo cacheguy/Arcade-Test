@@ -67,6 +67,7 @@ class Entity(arcade.Sprite):
         self.face_direction = RIGHT_FACING
         self.scale = CHARACTER_SCALING
         self.state = "idle"
+        self.dt = 0
 
         # ---- Load Textures ----
 
@@ -77,6 +78,19 @@ class Entity(arcade.Sprite):
 
         # Hit box will be set based on the first image used.
         self.hit_box = self.texture.hit_box_points
+
+    def get_state(self):
+        return "idle"
+
+    def update_animation(self, delta_time):
+        self.dt = delta_time
+        self.old_state = self.state
+        if self.change_x < 0 and self.face_direction == RIGHT_FACING:
+            self.face_direction = LEFT_FACING
+        elif self.change_x > 0 and self.face_direction == LEFT_FACING:
+            self.face_direction = RIGHT_FACING
+
+        self.state = self.get_state()
 
 
     def on_update(self, delta_time):
@@ -89,16 +103,45 @@ class Entity(arcade.Sprite):
 
 
 class EnemySprite(Entity):
-    pass
-
-class RobotEnemySprite(EnemySprite):
     def __init__(self):
         images_path = "src/assets/images/robot"
         super().__init__(images_path)
         self.fall_texture_pair = load_texture_pair(f"{images_path}/fall1.png")
         self.walk_textures = [load_texture_pair(f"{images_path}/walk{i+1}.png") for i in range(8)]
 
-        self.walk_anim = WalkingAnimation(self.walk_textures)
+        self.walk_anim = WalkingAnimation(self.walk_textures, max_player_speed=1)
+
+    def get_state(self):
+        if abs(self.change_y) > 0:
+            return "fall"
+
+        if self.change_x == 0:
+            return "idle"
+
+        if abs(self.change_x) > 0:
+            return "walk"
+
+        raise UknownAnimationCaseError("There has been an unknown animation case. In other words, the program can't \
+                                        figure out which animation to use.")
+
+    def update_animation(self, delta_time):
+        super().update_animation(delta_time)
+
+        if self.state == "idle":
+            self.texture = self.idle_texture_pair[self.face_direction]
+
+        elif self.state == "fall":
+            self.texture = self.fall_texture_pair[self.face_direction]
+
+        elif self.state == "walk":
+            if not self.state == self.old_state:
+                self.walk_anim.reset()
+            self.texture = self.walk_anim.get_current_frame(self.face_direction)
+            self.walk_anim.update(self.change_x, self.dt)
+
+
+class RobotEnemySprite(EnemySprite):
+    pass
 
 
 class PlayerSprite(Entity):
@@ -123,6 +166,7 @@ class PlayerSprite(Entity):
             right_pressed=False,
             left_pressed=False
         )
+        self.climbing = False
 
     def set_physics_state(self, is_on_ladder, can_jump, up_pressed, down_pressed, right_pressed, left_pressed):
         self.is_on_ladder = is_on_ladder
@@ -152,20 +196,12 @@ class PlayerSprite(Entity):
                                         figure out which animation to use.")
 
     def update_animation(self, delta_time = 1/60):
-        self.dt = delta_time
-        old_state = self.state
-        if self.change_x < 0 and self.face_direction == RIGHT_FACING:
-            self.face_direction = LEFT_FACING
-        elif self.change_x > 0 and self.face_direction == LEFT_FACING:
-            self.face_direction = RIGHT_FACING
+        super().update_animation(delta_time)
 
         if self.is_on_ladder and (self.up_pressed or self.down_pressed):
             self.climbing = True
         elif not self.is_on_ladder:
             self.climbing = False
-            
-        self.state = self.get_state()
-
         if self.state == "idle":
             self.texture = self.idle_texture_pair[self.face_direction]
 
@@ -176,13 +212,13 @@ class PlayerSprite(Entity):
             self.texture = self.fall_texture_pair[self.face_direction]
 
         elif self.state == "walk":
-            if not self.state == old_state:
+            if not self.state == self.old_state:
                 self.walk_anim.reset()
             self.texture = self.walk_anim.get_current_frame(self.face_direction)
             self.walk_anim.update(self.change_x, self.dt)
 
         elif self.state == "climb":
-            if not self.state == old_state:
+            if not self.state == self.old_state:
                 self.climb_anim.reset()
             self.texture = self.climb_anim.get_current_frame()
             # If the player is moving, update the climbing animation, to make the player climb.
