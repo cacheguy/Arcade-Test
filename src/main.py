@@ -27,6 +27,7 @@ MAX_SPEED = 5  # Speed limit
 ACCELERATION_RATE = 0.7  # How fast we accelearte
 FRICTION = 0.7  # How fast to slow down after we let off the key
 MAX_JUMP_COUNT = 8
+JUMP_PAD_BOOST_SPEED = 26
 
 SPRITE_PIXEL_SIZE = 16
 GRID_PIXEL_SIZE = SPRITE_PIXEL_SIZE * TILE_SCALING
@@ -45,6 +46,7 @@ COINS_LAYER = "Coins"
 DANGER_LAYER = "Dangers"
 GOAL_LAYER = "Goal"
 ENEMIES_LAYER = "Enemies"
+JUMP_PADS_LAYER = "Jump Pads"
 
 
 class UknownEnemyError(Exception): pass
@@ -71,6 +73,7 @@ class Game(arcade.Window):
         self.debug_text_y = 10
         self.jump_count = 0
         self.moved_camera = False
+        self.was_touching_jump_pads = list()
 
         self.score = 0
         self.level = 1
@@ -89,6 +92,7 @@ class Game(arcade.Window):
         self.jump_sound = arcade.load_sound(":resources:sounds/jump1.wav")
         self.game_over_sound = arcade.load_sound(":resources:sounds/gameover1.wav")
         self.goal_sound = arcade.load_sound(":resources:sounds/upgrade4.wav")
+        self.jump_pad_sound = arcade.load_sound(":resources:sounds/upgrade1.wav")
 
         #self.set_update_rate(1/500)
 
@@ -124,6 +128,9 @@ class Game(arcade.Window):
             },
             ENEMIES_LAYER: {
                 "use_spatial_hash": False
+            },
+            JUMP_PADS_LAYER: {
+                "use_spatial_hash": True
             }
         }
 
@@ -363,6 +370,31 @@ class Game(arcade.Window):
         # So, we set camera_speed to 1.0 for that
         self.center_camera_to_player(camera_speed=1.0)
 
+    def check_player_collisions(self, spritelist: str):
+        hit_list = arcade.check_for_collision_with_list(self.player, self.scene[spritelist])
+        if hit_list:
+            if spritelist == COINS_LAYER:
+                # Better to do this than to play a sound for every single coin
+                self.collect_coin_sound.play()
+                for coin in hit_list:
+                    coin.remove_from_sprite_lists()
+                    self.score += 1
+            elif spritelist == DANGER_LAYER:
+                if hit_list:
+                    self.kill_player()
+            elif spritelist == GOAL_LAYER:
+                # Advance to the next level
+                self.level += 1
+                # Load the next level
+                self.setup()
+                self.goal_sound.play()
+            elif spritelist == JUMP_PADS_LAYER:
+                for jump_pad in hit_list:
+                    if not jump_pad in self.was_touching_jump_pads:
+                        self.player.change_y = JUMP_PAD_BOOST_SPEED
+                        self.jump_pad_sound.play()
+                        self.was_touching_jump_pads.append(jump_pad)
+
     def on_update(self, delta_time):
         """Movement and game logic."""
         self.dt = delta_time * TARGET_FPS
@@ -404,29 +436,16 @@ class Game(arcade.Window):
             enemy.change_y -= GRAVITY
             solid_platforms = [self.scene[PLATFORMS_LAYER], self.scene[MOVING_PLATFORMS_LAYER]]
             arcade.physics_engines._move_sprite(enemy, solid_platforms, ramp_up=True)
+        
+        for jump_pad in self.was_touching_jump_pads:
+            if not arcade.check_for_collision(self.player, jump_pad):
+                self.was_touching_jump_pads.remove(jump_pad)
 
-        coin_hit_list = arcade.check_for_collision_with_list(self.player, self.scene["Coins"])
-
-        # Better to do this than to play a sound for every single coin
-        if coin_hit_list:
-            self.collect_coin_sound.play()
-            
-        for coin in coin_hit_list:
-            coin.remove_from_sprite_lists()
-            self.score += 1
-
-        # Did the player touch something they should not?
-        if arcade.check_for_collision_with_list(self.player, self.scene[DANGER_LAYER]) \
-           or self.player.center_y < -100:  # Did the player fall off the map?
+        if self.player.center_y < -500:
             self.kill_player()
 
-        # See if the user reached the goal and finished the level.
-        if arcade.check_for_collision_with_list(self.player, self.scene[GOAL_LAYER]):
-            # Advance to the next level
-            self.level += 1
-            # Load the next level
-            self.setup()
-            self.goal_sound.play()
+        for spritelist in self.scene.name_mapping.keys():
+            self.check_player_collisions(spritelist)
 
         self.center_camera_to_player(camera_speed=CAMERA_SPEED)
         clock.tick()
