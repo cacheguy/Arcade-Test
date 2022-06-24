@@ -1,12 +1,8 @@
-from email.mime import image
 import arcade
 from math import floor
 
-# Constants used to track if the player is facing left or right
-RIGHT_FACING = 0
-LEFT_FACING = 1
-
-CHARACTER_SCALING = 4
+from constants import *
+from sounds import jump_sound
 
 
 def load_texture_pair(file_name):
@@ -149,6 +145,9 @@ class PlayerSprite(Entity):
         images_path = "src/assets/images/player"
         super().__init__(images_path)
 
+        self.jump_count = 0
+        self.climbing = False
+
         self.jump_texture_pair = load_texture_pair(f"{images_path}/jump1.png")
         self.fall_texture_pair = load_texture_pair(f"{images_path}/fall1.png")
         self.walk_textures = [load_texture_pair(f"{images_path}/walk{i+1}.png") for i in range(8)]
@@ -159,28 +158,31 @@ class PlayerSprite(Entity):
 
         # Set default physic states
         self.set_physics_state(
-            is_on_ladder=False,
-            can_jump=False,
             up_pressed=False,
             down_pressed=False,
             right_pressed=False,
-            left_pressed=False
+            left_pressed=False,
+            god_mode=False
         )
-        self.climbing = False
 
-    def set_physics_state(self, is_on_ladder, can_jump, up_pressed, down_pressed, right_pressed, left_pressed):
-        self.is_on_ladder = is_on_ladder
-        self.can_jump = can_jump
+    def register_one_physics_engine(self, physics_engine):
+        self.physics_engine = physics_engine
+
+    def set_physics_state(self, up_pressed, down_pressed, right_pressed, left_pressed, god_mode):
         self.up_pressed = up_pressed
         self.down_pressed = down_pressed
         self.right_pressed = right_pressed
         self.left_pressed = left_pressed
+        self.god_mode = god_mode
 
     def get_state(self):
+        if self.god_mode:
+            return "fall"
+
         if self.climbing:
             return "climb"
 
-        if (not self.can_jump) and (not self.is_on_ladder):  # This means the player is in the air
+        if (not self.physics_engine.can_jump()) and (not self.physics_engine.is_on_ladder()):  # This means the player is in the air
             if self.change_y > 0:
                 return "jump"
             else:
@@ -195,12 +197,75 @@ class PlayerSprite(Entity):
         raise UknownAnimationCaseError("There has been an unknown animation case. In other words, the program can't \
                                         figure out which animation to use.")
 
+    def on_update(self, delta_time):
+        """Handle the player's movement based on the pressed keys."""
+        if self.god_mode:
+            self.update_god_mode_physics()
+        else:
+            if self.physics_engine.can_jump() and not self.up_pressed:
+                self.jump_count = 0
+
+            if self.physics_engine.is_on_ladder():
+                if self.up_pressed and not self.down_pressed:
+                    self.change_y = PLAYER_MOVEMENT_SPEED
+                    self.jump_count = MAX_JUMP_COUNT
+                elif self.down_pressed and not self.up_pressed:
+                    self.change_y = -PLAYER_MOVEMENT_SPEED
+                else:
+                    self.change_y = 0
+
+            elif (self.physics_engine.can_jump() or self.jump_count > 0) \
+                 and self.jump_count < MAX_JUMP_COUNT \
+                 and self.up_pressed:
+                self.change_y = PLAYER_JUMP_SPEED
+                self.jump_count += 1
+                if self.jump_count == 1:
+                    jump_sound.play()
+            
+            # Apply acceleration based on the keys pressed
+            if self.left_pressed and not self.right_pressed:
+                self.change_x += -ACCELERATION_RATE
+            elif self.right_pressed and not self.left_pressed:
+                self.change_x += ACCELERATION_RATE
+            else:
+                if self.change_x > 0:
+                    self.change_x -= FRICTION
+                    if self.change_x < 0:
+                        self.change_x = 0
+                elif self.change_x < 0:
+                    self.change_x += FRICTION
+                    if self.change_x > 0:
+                        self.change_x = 0
+            
+            # Ensure player speed does not exceed max speed
+            if self.change_x > MAX_SPEED:
+                self.change_x = MAX_SPEED
+            elif self.change_x < -MAX_SPEED:
+                self.change_x = -MAX_SPEED
+
+    def update_god_mode_physics(self):
+        """God mode physics"""
+
+        if self.left_pressed and not self.right_pressed:
+            self.change_x = -PLAYER_MOVEMENT_SPEED
+        elif self.right_pressed and not self.left_pressed:
+            self.change_x = PLAYER_MOVEMENT_SPEED
+        else:
+            self.change_x = 0
+
+        if self.up_pressed and not self.down_pressed:
+            self.change_y = PLAYER_MOVEMENT_SPEED
+        elif self.down_pressed and not self.up_pressed:
+            self.change_y = -PLAYER_MOVEMENT_SPEED
+        else:
+            self.change_y = 0
+
     def update_animation(self, delta_time = 1/60):
         super().update_animation(delta_time)
 
-        if self.is_on_ladder and (self.up_pressed or self.down_pressed):
+        if self.physics_engine.is_on_ladder() and (self.up_pressed or self.down_pressed):
             self.climbing = True
-        elif not self.is_on_ladder:
+        elif not self.physics_engine.is_on_ladder():
             self.climbing = False
         if self.state == "idle":
             self.texture = self.idle_texture_pair[self.face_direction]
