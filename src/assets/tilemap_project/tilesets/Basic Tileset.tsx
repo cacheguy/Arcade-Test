@@ -8,6 +8,9 @@
   <image width="16" height="16" source="../../images/tiles/dirt.png"/>
  </tile>
  <tile id="2">
+  <properties>
+   <property name="type" value="coin"/>
+  </properties>
   <image width="16" height="16" source="../../images/tiles/gold_coin.png"/>
  </tile>
  <tile id="3">
@@ -33,13 +36,13 @@
  </tile>
  <tile id="7">
   <properties>
-   <property name="type" value="danger"/>
+   <property name="type" value="lava"/>
   </properties>
   <image width="16" height="16" source="../../images/tiles/lava_middle.png"/>
  </tile>
  <tile id="8">
   <properties>
-   <property name="type" value="danger"/>
+   <property name="type" value="lava"/>
   </properties>
   <image width="16" height="16" source="../../images/tiles/lava_top.png"/>
  </tile>

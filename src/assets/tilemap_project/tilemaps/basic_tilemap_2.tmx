@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.8" tiledversion="1.8.4" orientation="orthogonal" renderorder="right-down" width="60" height="45" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#87ceeb" nextlayerid="10" nextobjectid="1">
+<map version="1.8" tiledversion="1.8.4" orientation="orthogonal" renderorder="right-down" width="60" height="45" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#87ceeb" nextlayerid="11" nextobjectid="3">
  <tileset firstgid="1" source="../tilesets/Basic Tileset.tsx"/>
+ <objectgroup id="10" name="Enemies">
+  <object id="2" x="373.356" y="631.637">
+   <properties>
+    <property name="boundary_left" type="int" value="345"/>
+    <property name="boundary_right" type="int" value="410"/>
+    <property name="change_x" type="int" value="1"/>
+    <property name="type" value="robot"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
  <layer id="2" name="Moving Platforms" width="60" height="45">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,

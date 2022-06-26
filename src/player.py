@@ -147,6 +147,7 @@ class PlayerSprite(Entity):
 
         self.jump_count = 0
         self.climbing = False
+        self.jump_count = 0
 
         self.jump_texture_pair = load_texture_pair(f"{images_path}/jump1.png")
         self.fall_texture_pair = load_texture_pair(f"{images_path}/fall1.png")

@@ -13,6 +13,9 @@ import sounds
 class UknownEnemyError(Exception): pass
 
 
+class UknownTileTypeError(Exception): pass
+
+
 class Game(arcade.Window):
     """Main game application."""
 
@@ -30,9 +33,8 @@ class Game(arcade.Window):
         self.physics_engine = None
         self.camera = None
         self.gui_camera = None
-        self.draw_debug_text = False
+        self.draw_debug_text = True
         self.debug_text_y = 10
-        self.jump_count = 0
         self.moved_camera = False
         self.was_touching_jump_pads = list()
 
@@ -57,6 +59,34 @@ class Game(arcade.Window):
         # Map name 
         map_name = r"src\assets\tilemap_project\tilemaps\basic_tilemap_1.tmx"
 
+        # # Layer specific options for the tilemap
+        # layer_options = {
+        #     PLATFORMS_LAYER: {
+        #         "use_spatial_hash": True
+        #     },
+        #     MOVING_PLATFORMS_LAYER: {
+        #         "use_spatial_hash": False
+        #     },
+        #     LADDERS_LAYER: {
+        #         "use_spatial_hash": True
+        #     },
+        #     COINS_LAYER: {
+        #         "use_spatial_hash": True
+        #     },
+        #     DANGER_LAYER: {
+        #         "use_spatial_hash": True
+        #     },
+        #     GOAL_LAYER: {
+        #         "use_spatial_hash": True
+        #     },
+        #     ENEMIES_LAYER: {
+        #         "use_spatial_hash": False
+        #     },
+        #     JUMP_PADS_LAYER: {
+        #         "use_spatial_hash": True
+        #     }
+        # }
+
         # Layer specific options for the tilemap
         layer_options = {
             PLATFORMS_LAYER: {
@@ -65,23 +95,11 @@ class Game(arcade.Window):
             MOVING_PLATFORMS_LAYER: {
                 "use_spatial_hash": False
             },
-            LADDERS_LAYER: {
-                "use_spatial_hash": True
-            },
-            COINS_LAYER: {
-                "use_spatial_hash": True
-            },
-            DANGER_LAYER: {
-                "use_spatial_hash": True
-            },
-            GOAL_LAYER: {
+            OBJECTS_LAYER: {
                 "use_spatial_hash": True
             },
             ENEMIES_LAYER: {
                 "use_spatial_hash": False
-            },
-            JUMP_PADS_LAYER: {
-                "use_spatial_hash": True
             }
         }
 
@@ -92,7 +110,31 @@ class Game(arcade.Window):
         # from the map as SpriteLists in the scene in the proper order.
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
-        self.scene.add_sprite_list(PLAYER_LAYER)
+        self.scene.add_sprite_list(LADDERS_LAYER, True)
+        self.scene.add_sprite_list(COINS_LAYER, True)
+        self.scene.add_sprite_list(DANGER_LAYER, True)
+        self.scene.add_sprite_list(GOAL_LAYER, True)
+        self.scene.add_sprite_list(JUMP_PADS_LAYER, True)
+        self.scene.add_sprite_list(PLAYER_LAYER, False)
+
+        types_to_layer = {
+            ("ladder",): LADDERS_LAYER,
+            ("coin",): COINS_LAYER,
+            ("lava",): DANGER_LAYER,
+            ("goal",): GOAL_LAYER,
+            ("jump_pad",): JUMP_PADS_LAYER
+        }
+
+        for tile in self.scene[OBJECTS_LAYER]:
+            try:
+                ttype = tile.properties["type"]
+            except KeyError:
+                raise UknownTileTypeError()
+            for key in types_to_layer.keys():
+                if ttype in key:
+                    self.scene.add_sprite(name=types_to_layer[key], sprite=tile)
+        
+        self.scene.remove_sprite_list_by_name(OBJECTS_LAYER)
 
         # Set up the player, specifically placing it at these coordinates.
         self.player = PlayerSprite()
@@ -171,7 +213,7 @@ class Game(arcade.Window):
             self.debug_text("Change y", self.player.change_y)
             self.debug_text("Change x", self.player.change_x)
             self.debug_text("Can Jump", self.physics_engine.can_jump())
-            self.debug_text("Jump Count", self.jump_count)
+            self.debug_text("Jump Count", self.player.jump_count)
             self.debug_text("Was Touching Jump Pads", self.was_touching_jump_pads)
     
     def debug_text(self, item, value):

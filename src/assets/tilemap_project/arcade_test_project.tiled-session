@@ -3,10 +3,10 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "tilemaps/basic_tilemap.tmx",
+    "activeFile": "tilemaps/basic_tilemap_1.tmx",
     "expandedProjectPaths": [
-        "tilesets",
-        "tilemaps"
+        "tilemaps",
+        "tilesets"
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
@@ -207,18 +207,26 @@
         },
         "tilemaps/basic_tilemap.tmx": {
             "scale": 4,
-            "selectedLayer": 7,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 235.5,
-                "y": 698.875
+                "x": 235.25,
+                "y": 698.625
+            }
+        },
+        "tilemaps/basic_tilemap_1.tmx": {
+            "scale": 1.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 311.66666666666663,
+                "y": 399.66666666666663
             }
         },
         "tilemaps/basic_tilemap_2.tmx": {
             "scale": 1.5641905737704918,
-            "selectedLayer": 1,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 472.4488258605444,
-                "y": 360.25022107228244
+                "x": 471.4898634264566,
+                "y": 359.6109127828907
             }
         },
         "tilemaps/basic_tilemap_template.tmx": {
@@ -232,7 +240,7 @@
         "tilesets/Basic Tileset.tsx": {
             "dynamicWrapping": false,
             "scaleInDock": 4,
-            "scaleInEditor": 1
+            "scaleInEditor": 5.5
         }
     },
     "last.externalTilesetPath": "D:/Desktop1/Python/Arcade Test/src/assets/tilemap_project/tilesets",
@@ -243,23 +251,25 @@
     "map.tileWidth": 16,
     "map.width": 60,
     "openFiles": [
-        "tilemaps/basic_tilemap.tmx"
+        "tilemaps/basic_tilemap_1.tmx",
+        "tilemaps/basic_tilemap_2.tmx",
+        "tilesets/Basic Tileset.tsx"
     ],
     "project": "arcade_test_project.tiled-project",
     "property.type": "string",
     "recentFiles": [
-        "tilemaps/basic_tilemap_template.tmx",
+        "tilesets/Basic Tileset.tsx",
+        "tilemaps/basic_tilemap_2.tmx",
+        "tilemaps/basic_tilemap_1.tmx",
         "tilemaps/basic_tilemap.tmx",
+        "tilemaps/basic_tilemap_template.tmx",
         "tilemaps/Basic Tilemap2.tmx",
         "tilemaps/Basic Tilemap.tmx",
-        "tilesets/Basic Tileset.tsx",
         "tilemaps/Basic Tileset.tsx",
         "D:/Desktop1/Python/Arcade Test/src/assets/tilemaps/Basic Tileset.tsx",
         "D:/Desktop1/Python/Arcade Test/src/assets/tilemaps/Basic Tilemap2.tmx",
         "D:/Desktop1/Python/Arcade Test/src/assets/tilemaps/Basic Tilemap.tmx",
-        "D:/Desktop1/Python/test/.venv/Lib/site-packages/arcade/resources/tiled_maps/map_with_ladders.json",
-        "D:/Desktop1/Python/Arcade Test/src/assets/tilemaps/map_with_ladders.json",
-        "D:/Desktop1/Python/Arcade Test/.venv/Lib/site-packages/arcade/resources/tiled_maps/map_with_ladders.json"
+        "D:/Desktop1/Python/test/.venv/Lib/site-packages/arcade/resources/tiled_maps/map_with_ladders.json"
     ],
     "tileset.lastUsedFilter": "Tiled tileset files (*.tsx *.xml)",
     "tileset.lastUsedFormat": "tsx",
