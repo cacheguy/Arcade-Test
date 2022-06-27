@@ -57,3 +57,4 @@ $RECYCLE.BIN/
 pylintrc
 __pycache__/
 .mypy_cache/
+src/assets/tilemap_project/arcade_test_project.tiled-session

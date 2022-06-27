@@ -59,34 +59,6 @@ class Game(arcade.Window):
         # Map name 
         map_name = r"src\assets\tilemap_project\tilemaps\basic_tilemap_1.tmx"
 
-        # # Layer specific options for the tilemap
-        # layer_options = {
-        #     PLATFORMS_LAYER: {
-        #         "use_spatial_hash": True
-        #     },
-        #     MOVING_PLATFORMS_LAYER: {
-        #         "use_spatial_hash": False
-        #     },
-        #     LADDERS_LAYER: {
-        #         "use_spatial_hash": True
-        #     },
-        #     COINS_LAYER: {
-        #         "use_spatial_hash": True
-        #     },
-        #     DANGER_LAYER: {
-        #         "use_spatial_hash": True
-        #     },
-        #     GOAL_LAYER: {
-        #         "use_spatial_hash": True
-        #     },
-        #     ENEMIES_LAYER: {
-        #         "use_spatial_hash": False
-        #     },
-        #     JUMP_PADS_LAYER: {
-        #         "use_spatial_hash": True
-        #     }
-        # }
-
         # Layer specific options for the tilemap
         layer_options = {
             PLATFORMS_LAYER: {
@@ -117,22 +89,14 @@ class Game(arcade.Window):
         self.scene.add_sprite_list(JUMP_PADS_LAYER, True)
         self.scene.add_sprite_list(PLAYER_LAYER, False)
 
-        types_to_layer = {
-            ("ladder",): LADDERS_LAYER,
-            ("coin",): COINS_LAYER,
-            ("lava",): DANGER_LAYER,
-            ("goal",): GOAL_LAYER,
-            ("jump_pad",): JUMP_PADS_LAYER
-        }
-
         for tile in self.scene[OBJECTS_LAYER]:
             try:
                 ttype = tile.properties["type"]
             except KeyError:
                 raise UknownTileTypeError()
-            for key in types_to_layer.keys():
+            for key in TYPES_TO_PLAYER.keys():
                 if ttype in key:
-                    self.scene.add_sprite(name=types_to_layer[key], sprite=tile)
+                    self.scene.add_sprite(name=TYPES_TO_PLAYER[key], sprite=tile)
         
         self.scene.remove_sprite_list_by_name(OBJECTS_LAYER)
 
@@ -204,17 +168,18 @@ class Game(arcade.Window):
             self.debug_text("Score", self.score)
             self.debug_text("God Mode", self.god_mode)
 
-            self.debug_text("Right Key", self.player.right_pressed)
-            self.debug_text("Left Key", self.player.left_pressed)
-            self.debug_text("Up Key", self.player.up_pressed)
-            self.debug_text("Down Key", self.player.down_pressed)
-            self.debug_text("Player y", self.player.center_y)
-            self.debug_text("Player x", self.player.center_x)
+            # self.debug_text("Right Key", self.player.right_pressed)
+            # self.debug_text("Left Key", self.player.left_pressed)
+            # self.debug_text("Up Key", self.player.up_pressed)
+            # self.debug_text("Down Key", self.player.down_pressed)
+            # self.debug_text("Player y", self.player.center_y)
+            # self.debug_text("Player x", self.player.center_x)
             self.debug_text("Change y", self.player.change_y)
-            self.debug_text("Change x", self.player.change_x)
+            # self.debug_text("Change x", self.player.change_x)
             self.debug_text("Can Jump", self.physics_engine.can_jump())
+            self.debug_text("Stop Jump", self.player.stop_jump)
             self.debug_text("Jump Count", self.player.jump_count)
-            self.debug_text("Was Touching Jump Pads", self.was_touching_jump_pads)
+            # self.debug_text("Was Touching Jump Pads", self.was_touching_jump_pads)
     
     def debug_text(self, item, value):
         """Adds debug text to the top of the previous debug text."""

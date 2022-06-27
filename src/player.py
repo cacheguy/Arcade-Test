@@ -148,6 +148,7 @@ class PlayerSprite(Entity):
         self.jump_count = 0
         self.climbing = False
         self.jump_count = 0
+        self.stop_jump = False
 
         self.jump_texture_pair = load_texture_pair(f"{images_path}/jump1.png")
         self.fall_texture_pair = load_texture_pair(f"{images_path}/fall1.png")
@@ -203,8 +204,18 @@ class PlayerSprite(Entity):
         if self.god_mode:
             self.update_god_mode_physics()
         else:
-            if self.physics_engine.can_jump() and not self.up_pressed:
-                self.jump_count = 0
+            # This piece of code stops the player from jumping in the air 
+            # When the up key is released (not pressed)
+            if not self.up_pressed:
+                # If on the ground
+                if self.physics_engine.can_jump():
+                    # Allow the player to jump again
+                    self.stop_jump = False
+                    self.jump_count = 0
+                # Else, if in the air
+                else:
+                    # Stop the player from jumping in the air
+                    self.stop_jump = True
 
             if self.physics_engine.is_on_ladder():
                 if self.up_pressed and not self.down_pressed:
@@ -217,7 +228,8 @@ class PlayerSprite(Entity):
 
             elif (self.physics_engine.can_jump() or self.jump_count > 0) \
                  and self.jump_count < MAX_JUMP_COUNT \
-                 and self.up_pressed:
+                 and self.up_pressed \
+                 and not self.stop_jump:
                 self.change_y = PLAYER_JUMP_SPEED
                 self.jump_count += 1
                 if self.jump_count == 1:
