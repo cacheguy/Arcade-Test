@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.8" tiledversion="1.8.4" name="Basic Tileset" tilewidth="16" tileheight="16" tilecount="12" columns="0">
+<tileset version="1.9" tiledversion="1.9.0" name="Basic Tileset" tilewidth="16" tileheight="16" tilecount="13" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="0">
   <image width="16" height="16" source="../../images/tiles/brick.png"/>
@@ -21,12 +21,6 @@
    <property name="type" value="goal"/>
   </properties>
   <image width="16" height="16" source="../../images/tiles/green_flag.png"/>
- </tile>
- <tile id="5">
-  <properties>
-   <property name="type" value="jump_pad"/>
-  </properties>
-  <image width="16" height="16" source="../../images/tiles/jump_pad.png"/>
  </tile>
  <tile id="6">
   <properties>
@@ -54,5 +48,17 @@
  </tile>
  <tile id="11">
   <image width="16" height="16" source="../../images/tiles/wood.png"/>
+ </tile>
+ <tile id="12">
+  <properties>
+   <property name="type" value="blue_jump_pad"/>
+  </properties>
+  <image width="16" height="16" source="../../images/tiles/blue_jump_pad.png"/>
+ </tile>
+ <tile id="13">
+  <properties>
+   <property name="type" value="green_jump_pad"/>
+  </properties>
+  <image width="16" height="16" source="../../images/tiles/green_jump_pad.png"/>
  </tile>
 </tileset>

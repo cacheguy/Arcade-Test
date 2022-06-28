@@ -53,5 +53,5 @@ TYPES_TO_PLAYER = {
     ("coin",): COINS_LAYER,
     ("lava",): DANGER_LAYER,
     ("goal",): GOAL_LAYER,
-    ("jump_pad",): JUMP_PADS_LAYER
+    ("blue_jump_pad", "green_jump_pad"): JUMP_PADS_LAYER
 }

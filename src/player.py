@@ -1,6 +1,6 @@
 import arcade
-from math import floor
 
+from animations import Animation, WalkingAnimation
 from constants import *
 from sounds import jump_sound
 
@@ -14,46 +14,6 @@ def load_texture_pair(file_name):
 
 
 class UknownAnimationCaseError(Exception): pass
-
-
-class Animation():
-    def __init__(self, frames, speed=0.25, use_right_left=True):
-        self.frames = frames
-        self.speed = speed
-        self.use_right_left = use_right_left
-        self._frame_num = 0
-
-    @property
-    def frame_num(self):
-        return self._frame_num
-
-    @frame_num.setter
-    def frame_num(self, value):
-        self._frame_num = value
-        if self.frame_num >= len(self.frames):
-            self.reset()
-
-    def reset(self):
-        self._frame_num = 0
-
-    def update(self, delta_time):
-        self.frame_num += self.speed
-
-    def get_current_frame(self, direction=None):
-        if self.use_right_left:
-            current_frame = self.frames[floor(self.frame_num)][direction]
-        else:
-            current_frame = self.frames[floor(self.frame_num)]
-        return current_frame
-
-
-class WalkingAnimation(Animation):
-    def __init__(self, frames, max_player_speed=5, speed=0.25, use_right_left=True):
-        super().__init__(frames=frames, speed=speed, use_right_left=use_right_left)
-        self.max_player_speed = max_player_speed
-
-    def update(self, player_speed, delta_time):
-        self.frame_num += abs((self.speed * (player_speed / self.max_player_speed)))
 
     
 class Entity(arcade.Sprite):
@@ -78,8 +38,8 @@ class Entity(arcade.Sprite):
     def get_state(self):
         return "idle"
 
-    def update_animation(self, delta_time):
-        self.dt = delta_time
+    def prepare_animations(self):
+        """Call this before every update_animation method"""
         self.old_state = self.state
         if self.change_x < 0 and self.face_direction == RIGHT_FACING:
             self.face_direction = LEFT_FACING
@@ -88,14 +48,11 @@ class Entity(arcade.Sprite):
 
         self.state = self.get_state()
 
+    def update_animation(self, delta_time=1/60):
+        self.prepare_animations()
 
     def on_update(self, delta_time):
         self.dt = delta_time
-        self.position = [
-            self._position[0] + self.change_x,
-            self._position[1] + self.change_y,
-        ]
-        self.angle += self.change_angle
 
 
 class EnemySprite(Entity):
@@ -120,8 +77,8 @@ class EnemySprite(Entity):
         raise UknownAnimationCaseError("There has been an unknown animation case. In other words, the program can't \
                                         figure out which animation to use.")
 
-    def update_animation(self, delta_time):
-        super().update_animation(delta_time)
+    def update_animation(self, delta_time=1/60):
+        super().update_animation()
 
         if self.state == "idle":
             self.texture = self.idle_texture_pair[self.face_direction]
@@ -201,6 +158,7 @@ class PlayerSprite(Entity):
 
     def on_update(self, delta_time):
         """Handle the player's movement based on the pressed keys."""
+        self.dt = delta_time
         if self.god_mode:
             self.update_god_mode_physics()
         else:
@@ -274,7 +232,7 @@ class PlayerSprite(Entity):
             self.change_y = 0
 
     def update_animation(self, delta_time = 1/60):
-        super().update_animation(delta_time)
+        self.prepare_animations()
 
         if self.physics_engine.is_on_ladder() and (self.up_pressed or self.down_pressed):
             self.climbing = True

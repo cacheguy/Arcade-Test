@@ -36,7 +36,7 @@ class Game(arcade.Window):
         self.draw_debug_text = True
         self.debug_text_y = 10
         self.moved_camera = False
-        self.was_touching_jump_pads = list()
+        self.was_touching_jump_pads: list[arcade.Sprite] = list()
 
         self.score = 0
         self.level = 1
@@ -57,7 +57,7 @@ class Game(arcade.Window):
         self.gui_camera = arcade.Camera(self.width, self.height)
         
         # Map name 
-        map_name = r"src\assets\tilemap_project\tilemaps\basic_tilemap_1.tmx"
+        map_name = r"src\assets\tilemap_project\tilemaps\basic_tilemap_2.tmx"
 
         # Layer specific options for the tilemap
         layer_options = {
@@ -281,7 +281,17 @@ class Game(arcade.Window):
             elif spritelist_name == JUMP_PADS_LAYER:
                 for jump_pad in hit_list:
                     if not jump_pad in self.was_touching_jump_pads:
-                        self.player.bottom = jump_pad.top
+                        # This part might be confusing, so let me explain.
+                        # For consistency, we want the player to jump FROM THE TOP of the jump pad, instead of from
+                        # their current position.
+                        # However, each type of jump pad has different heights.
+                        # This means the player will jump at a different height, because it will jump from a different 
+                        # position, due to the different jump pad heights.
+                        # So, using this piece of code, we can get the height of the tile of the jump pad (which is 
+                        # always consistent), instead of the height of the jump pad itself.
+                        # It's not that big of a problem, but it helps to have a solution.
+                        jump_pad_cartesian_y = (self.tile_map.get_cartesian(jump_pad.center_x, jump_pad.center_y))[1]
+                        self.player.bottom = jump_pad_cartesian_y * GRID_PIXEL_SIZE
                         self.player.change_y = JUMP_PAD_BOOST_SPEED
                         sounds.jump_pad_sound.play()
                         self.was_touching_jump_pads.append(jump_pad)
@@ -298,8 +308,6 @@ class Game(arcade.Window):
         else:
             self.physics_engine.gravity_constant = GRAVITY
 
-        self.physics_engine.update()
-
         self.player.set_physics_state(
             up_pressed=self.up_pressed,
             down_pressed=self.down_pressed,
@@ -307,12 +315,6 @@ class Game(arcade.Window):
             left_pressed=self.left_pressed,
             god_mode=self.god_mode
         )
-
-        # Update all animations in the scene
-        self.scene.update_animation(self.dt)
-
-        # Update walls, used with moving platofmrs
-        self.scene.on_update(delta_time=self.dt)
 
         for enemy in self.scene[ENEMIES_LAYER]:
             if (enemy.boundary_right and enemy.right > enemy.boundary_right and enemy.change_x > 0):
@@ -335,6 +337,10 @@ class Game(arcade.Window):
         for spritelist in self.scene.name_mapping.keys():
             self.check_player_collisions(spritelist)
 
+        self.scene.on_update(delta_time=self.dt)
+        self.scene.update_animation(delta_time=self.dt)
+
+        self.physics_engine.update()
         self.center_camera_to_player(camera_speed=CAMERA_SPEED)
         clock.tick()
         #sleep(0.05)
