@@ -82,6 +82,10 @@ class Game(arcade.Window):
         # from the map as SpriteLists in the scene in the proper order.
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
+        for layer in ALL_LAYERS:
+            if not self.scene.name_mapping.get(layer):
+                self.scene.add_sprite_list(layer, use_spatial_hash=layer_options[layer]["use_spatial_hash"])
+
         self.scene.add_sprite_list(LADDERS_LAYER, True)
         self.scene.add_sprite_list(COINS_LAYER, True)
         self.scene.add_sprite_list(DANGER_LAYER, True)
@@ -98,6 +102,8 @@ class Game(arcade.Window):
                 if ttype in key:
                     self.scene.add_sprite(name=TYPES_TO_PLAYER[key], sprite=tile)
         
+        # Delete OBJECTS_LAYER. Since we have split all of the tiles in OBJECTS_LAYER into seperate spritelists, we have
+        # no more use for it.
         self.scene.remove_sprite_list_by_name(OBJECTS_LAYER)
 
         # Set up the player, specifically placing it at these coordinates.
@@ -107,7 +113,7 @@ class Game(arcade.Window):
         self.scene.add_sprite(PLAYER_LAYER, self.player)
 
         # Add enemies
-        enemies_layer = self.tile_map.object_lists[ENEMIES_LAYER]
+        enemies_layer = self.tile_map.object_lists.get(ENEMIES_LAYER, list())
 
         for enemy_object in enemies_layer:
             cartesian = self.tile_map.get_cartesian(*enemy_object.shape)
@@ -292,7 +298,10 @@ class Game(arcade.Window):
                         # It's not that big of a problem, but it helps to have a solution.
                         jump_pad_cartesian_y = (self.tile_map.get_cartesian(jump_pad.center_x, jump_pad.center_y))[1]
                         self.player.bottom = jump_pad_cartesian_y * GRID_PIXEL_SIZE
-                        self.player.change_y = JUMP_PAD_BOOST_SPEED
+                        if jump_pad.properties["type"] == "blue_jump_pad":
+                            self.player.change_y = BLUE_JUMP_PAD_BOOST_SPEED
+                        elif jump_pad.properties["type"] == "green_jump_pad":
+                            self.player.change_y = GREEN_JUMP_PAD_BOOST_SPEED
                         sounds.jump_pad_sound.play()
                         self.was_touching_jump_pads.append(jump_pad)
 
