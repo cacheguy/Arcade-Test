@@ -56,8 +56,8 @@ class Game(arcade.Window):
         self.camera = arcade.Camera(self.width, self.height)
         self.gui_camera = arcade.Camera(self.width, self.height)
         
-        # Map name 
-        map_name = r"src\assets\tilemap_project\tilemaps\basic_tilemap_2.tmx"
+        map_name = "jump_pad_demo"
+        map_path = f"src/assets/tilemap_project/tilemaps/{map_name}.tmx"
 
         # Layer specific options for the tilemap
         layer_options = {
@@ -76,7 +76,7 @@ class Game(arcade.Window):
         }
 
         # Load in the tiled map
-        self.tile_map = arcade.load_tilemap(map_name, TILE_SCALING, layer_options)
+        self.tile_map = arcade.load_tilemap(map_path, TILE_SCALING, layer_options)
 
         # Initialize Scene with our TileMap, this will automatically add all layers
         # from the map as SpriteLists in the scene in the proper order.
@@ -112,7 +112,27 @@ class Game(arcade.Window):
         self.player.center_y = PLAYER_START_Y
         self.scene.add_sprite(PLAYER_LAYER, self.player)
 
-        # Add enemies
+        self.add_enemies_to_scene()
+
+        # Set the background color
+        if self.tile_map.background_color:
+            arcade.set_background_color(self.tile_map.background_color)
+
+        # Create the physics engine
+        self.physics_engine = arcade.PhysicsEnginePlatformer(
+            self.player, 
+            gravity_constant=GRAVITY, 
+            walls=self.scene[PLATFORMS_LAYER], 
+            platforms=self.scene[MOVING_PLATFORMS_LAYER],
+            ladders=self.scene[LADDERS_LAYER]
+        )
+        self.player.register_one_physics_engine(self.physics_engine)
+
+        self.score = 0
+
+    def add_enemies_to_scene(self):
+        """Add enemies to the scene. Assumes that self.tile_map and self.scene are already created."""
+         # Add enemies
         enemies_layer = self.tile_map.object_lists.get(ENEMIES_LAYER, list())
 
         for enemy_object in enemies_layer:
@@ -134,22 +154,6 @@ class Game(arcade.Window):
                 enemy.change_x = enemy_object.properties["change_x"]
 
             self.scene.add_sprite(ENEMIES_LAYER, enemy)
-
-        # Set the background color
-        if self.tile_map.background_color:
-            arcade.set_background_color(self.tile_map.background_color)
-
-        # Create the physics engine
-        self.physics_engine = arcade.PhysicsEnginePlatformer(
-            self.player, 
-            gravity_constant=GRAVITY, 
-            walls=self.scene[PLATFORMS_LAYER], 
-            platforms=self.scene[MOVING_PLATFORMS_LAYER],
-            ladders=self.scene[LADDERS_LAYER]
-        )
-        self.player.register_one_physics_engine(self.physics_engine)
-
-        self.score = 0
 
     def on_draw(self):
         """Clear, then render the screen."""
@@ -300,9 +304,10 @@ class Game(arcade.Window):
                         self.player.bottom = jump_pad_cartesian_y * GRID_PIXEL_SIZE
                         if jump_pad.properties["type"] == "blue_jump_pad":
                             self.player.change_y = BLUE_JUMP_PAD_BOOST_SPEED
+                            sounds.blue_jump_pad_sound.play()
                         elif jump_pad.properties["type"] == "green_jump_pad":
                             self.player.change_y = GREEN_JUMP_PAD_BOOST_SPEED
-                        sounds.jump_pad_sound.play()
+                            sounds.green_jump_pad_sound.play()
                         self.was_touching_jump_pads.append(jump_pad)
 
     def on_update(self, delta_time):
@@ -349,7 +354,13 @@ class Game(arcade.Window):
         self.scene.on_update(delta_time=self.dt)
         self.scene.update_animation(delta_time=self.dt)
 
+        # Update physics on everything
         self.physics_engine.update()
+        for enemy in self.scene[ENEMIES_LAYER]:
+            enemy.change_y -= GRAVITY
+            solid_platforms = [self.scene[PLATFORMS_LAYER], self.scene[MOVING_PLATFORMS_LAYER]]
+            arcade.physics_engines._move_sprite(enemy, solid_platforms, ramp_up=True)
+
         self.center_camera_to_player(camera_speed=CAMERA_SPEED)
         clock.tick()
         #sleep(0.05)
