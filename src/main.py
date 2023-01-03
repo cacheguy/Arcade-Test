@@ -4,11 +4,29 @@ from pyglet import clock
 from math import floor
 from time import sleep
 
-from player import PlayerSprite, RobotEnemySprite
+from player import PlayerSprite, BattleBotEnemy, MissleBotEnemy
 from constants import *
+import custom_tilemap
 import sounds
+import cProfile
+import pstats
 
 # TODO Update all libraries (especially arcade)
+
+TYPES_TO_LAYER = {
+    ("ladder",): LADDERS_LAYER,
+    ("coin",): COINS_LAYER,
+    ("lava",): DANGER_LAYER,
+    ("goal",): GOAL_LAYER,
+    ("blue_jump_pad", "green_jump_pad"): JUMP_PADS_LAYER
+}
+
+TYPES_TO_ENEMY = {
+    ("battle_bot",): BattleBotEnemy,
+    ("missle_bot",): MissleBotEnemy
+}
+
+MAP_NAME = "basic_tilemap_1"
 
 class UknownEnemyError(Exception): pass
 
@@ -47,6 +65,8 @@ class Game(arcade.Window):
         self.up_pressed = False
         self.down_pressed = False
 
+        # self.times = 0
+        # self.max_times = 60
         #self.set_update_rate(1/500)
 
     def setup(self):
@@ -56,8 +76,7 @@ class Game(arcade.Window):
         self.camera = arcade.Camera(self.width, self.height)
         self.gui_camera = arcade.Camera(self.width, self.height)
         
-        map_name = "jump_pad_demo"
-        map_path = f"src/assets/tilemap_project/tilemaps/{map_name}.tmx"
+        map_path = f"src/assets/tilemap_project/tilemaps/{MAP_NAME}.tmx"
 
         # Layer specific options for the tilemap
         layer_options = {
@@ -76,7 +95,7 @@ class Game(arcade.Window):
         }
 
         # Load in the tiled map
-        self.tile_map = arcade.load_tilemap(map_path, TILE_SCALING, layer_options)
+        self.tile_map = custom_tilemap.load_tilemap(map_path, TILE_SCALING, layer_options)
 
         # Initialize Scene with our TileMap, this will automatically add all layers
         # from the map as SpriteLists in the scene in the proper order.
@@ -92,15 +111,15 @@ class Game(arcade.Window):
         self.scene.add_sprite_list(GOAL_LAYER, True)
         self.scene.add_sprite_list(JUMP_PADS_LAYER, True)
         self.scene.add_sprite_list(PLAYER_LAYER, False)
-
+        
         for tile in self.scene[OBJECTS_LAYER]:
             try:
                 ttype = tile.properties["type"]
             except KeyError:
                 raise UknownTileTypeError()
-            for key in TYPES_TO_PLAYER.keys():
+            for key in TYPES_TO_LAYER.keys():
                 if ttype in key:
-                    self.scene.add_sprite(name=TYPES_TO_PLAYER[key], sprite=tile)
+                    self.scene.add_sprite(name=TYPES_TO_LAYER[key], sprite=tile)
         
         # Delete OBJECTS_LAYER. Since we have split all of the tiles in OBJECTS_LAYER into seperate spritelists, we have
         # no more use for it.
@@ -132,28 +151,51 @@ class Game(arcade.Window):
 
     def add_enemies_to_scene(self):
         """Add enemies to the scene. Assumes that self.tile_map and self.scene are already created."""
-         # Add enemies
-        enemies_layer = self.tile_map.object_lists.get(ENEMIES_LAYER, list())
-
+        enemies_layer = self.tile_map.object_lists[ENEMIES_LAYER]
+        id_to_enemies = dict()
         for enemy_object in enemies_layer:
-            cartesian = self.tile_map.get_cartesian(*enemy_object.shape)
-            enemy_type = enemy_object.properties["type"]
-            if enemy_type == "robot":
-                enemy = RobotEnemySprite()
-            else:
-                raise UknownEnemyError(f"Unknown enemy type: {enemy_type}.")
+            # Checks if enemy_object has the "type" property
+            # If it does, then it is an enemy
+            # If it doesn't, it is just a point. A point is used by enemy objects to indicate specific coordinates, like
+            # boundaries.
+            enemy_type = enemy_object.properties.get("type")
+            if enemy_type is not None:  
+                enemy_cartesian_pos = self.tile_map.get_cartesian(*enemy_object.shape)
 
-            enemy.center_x = floor(cartesian[0] * self.tile_map.tile_width * TILE_SCALING)
-            enemy.center_y = floor((cartesian[1] + 1) * self.tile_map.tile_height * TILE_SCALING)
+                if enemy_type in ("battle_bot", "missle_bot"):
+                    center_x = floor(enemy_cartesian_pos[0] * GRID_PIXEL_SIZE)
+                    center_y = floor((enemy_cartesian_pos[1] + 1) * GRID_PIXEL_SIZE)
+                    boundary_left_obj = self.tile_map._get_object_by_id(enemy_object.properties["boundary_left"])
+                    boundary_right_obj = self.tile_map._get_object_by_id(enemy_object.properties["boundary_right"])
+                    boundary_left = boundary_left_obj.shape[0] * TILE_SCALING
+                    boundary_right = boundary_right_obj.shape[0] * TILE_SCALING
 
-            if "boundary_left" in enemy_object.properties:
-                enemy.boundary_left = enemy_object.properties["boundary_left"] * TILE_SCALING
-            if "boundary_right" in enemy_object.properties:
-                enemy.boundary_right = enemy_object.properties["boundary_right"] * TILE_SCALING
-            if "change_x" in enemy_object.properties:
-                enemy.change_x = enemy_object.properties["change_x"]
+                    kwargs = {
+                        "center_x": center_x,
+                        "center_y": center_y,
+                        "boundary_left": boundary_left,
+                        "boundary_right": boundary_right
+                    }
 
-            self.scene.add_sprite(ENEMIES_LAYER, enemy)
+                elif enemy_type == "drone_bot":
+                    raise NotImplementedError("drone_bot is not implemented into the game yet.")
+
+                elif enemy_type == "assassin_bot":
+                    raise NotImplementedError("assassin_bot is not implemented into the game yet.")
+
+                else:
+                    raise UknownEnemyError(f"Unknown enemy type: {enemy_type}.")
+
+                TYPES_TO_ENEMY = {
+                    "battle_bot": BattleBotEnemy,
+                    "missle_bot": MissleBotEnemy,
+                }
+                try:
+                    enemy = TYPES_TO_ENEMY[enemy_type](**kwargs)
+                except KeyError:
+                    raise UknownEnemyError(f"Unknown enemy type: {enemy_type}.")
+
+                self.scene.add_sprite(ENEMIES_LAYER, enemy)
 
     def on_draw(self):
         """Clear, then render the screen."""
@@ -185,7 +227,7 @@ class Game(arcade.Window):
             # self.debug_text("Player y", self.player.center_y)
             # self.debug_text("Player x", self.player.center_x)
             self.debug_text("Change y", self.player.change_y)
-            # self.debug_text("Change x", self.player.change_x)
+            self.debug_text("Change x", self.player.change_x)
             self.debug_text("Can Jump", self.physics_engine.can_jump())
             self.debug_text("Stop Jump", self.player.stop_jump)
             self.debug_text("Jump Count", self.player.jump_count)
@@ -291,15 +333,13 @@ class Game(arcade.Window):
             elif spritelist_name == JUMP_PADS_LAYER:
                 for jump_pad in hit_list:
                     if not jump_pad in self.was_touching_jump_pads:
-                        # This part might be confusing, so let me explain.
                         # For consistency, we want the player to jump FROM THE TOP of the jump pad, instead of from
-                        # their current position.
+                        # their current y position.
                         # However, each type of jump pad has different heights.
                         # This means the player will jump at a different height, because it will jump from a different 
                         # position, due to the different jump pad heights.
-                        # So, using this piece of code, we can get the height of the tile of the jump pad (which is 
+                        # Using this piece of code, we can get the height of the tile of the jump pad (which is 
                         # always consistent), instead of the height of the jump pad itself.
-                        # It's not that big of a problem, but it helps to have a solution.
                         jump_pad_cartesian_y = (self.tile_map.get_cartesian(jump_pad.center_x, jump_pad.center_y))[1]
                         self.player.bottom = jump_pad_cartesian_y * GRID_PIXEL_SIZE
                         if jump_pad.properties["type"] == "blue_jump_pad":
@@ -312,6 +352,9 @@ class Game(arcade.Window):
 
     def on_update(self, delta_time):
         """Movement and game logic."""
+        # self.times += 1
+        # if self.times > self.max_times:
+        #     self.close()
         self.dt = delta_time * TARGET_FPS
         self.fps = 1 / delta_time
         self.moved_camera = False
@@ -329,17 +372,6 @@ class Game(arcade.Window):
             left_pressed=self.left_pressed,
             god_mode=self.god_mode
         )
-
-        for enemy in self.scene[ENEMIES_LAYER]:
-            if (enemy.boundary_right and enemy.right > enemy.boundary_right and enemy.change_x > 0):
-                enemy.change_x *= -1
-
-            if (enemy.boundary_left and enemy.left < enemy.boundary_left and enemy.change_x < 0):
-                enemy.change_x *= -1
-
-            enemy.change_y -= GRAVITY
-            solid_platforms = [self.scene[PLATFORMS_LAYER], self.scene[MOVING_PLATFORMS_LAYER]]
-            arcade.physics_engines._move_sprite(enemy, solid_platforms, ramp_up=True)
         
         for jump_pad in self.was_touching_jump_pads:
             if not arcade.check_for_collision(self.player, jump_pad):
@@ -370,6 +402,12 @@ def main():
     """Main function."""
     window = Game()
     window.setup()
+    # pr = cProfile.Profile()
+    # pr.enable()
+    # arcade.run()
+    # pr.disable()
+    # stats = pstats.Stats(pr)
+    # stats.sort_stats("time").print_stats("src")
     arcade.run()
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import arcade
 
 from animations import Animation, WalkingAnimation
 from constants import *
-from sounds import jump_sound
+import sounds
 
 
 def load_texture_pair(file_name):
@@ -56,13 +56,12 @@ class Entity(arcade.Sprite):
 
 
 class EnemySprite(Entity):
-    def __init__(self):
-        images_path = "src/assets/images/robot"
+    def __init__(self, images_path):
         super().__init__(images_path)
         self.fall_texture_pair = load_texture_pair(f"{images_path}/fall1.png")
         self.walk_textures = [load_texture_pair(f"{images_path}/walk{i+1}.png") for i in range(8)]
 
-        self.walk_anim = WalkingAnimation(self.walk_textures, max_player_speed=1)
+        self.walk_anim = WalkingAnimation(self.walk_textures, max_player_speed=3)
 
     def get_state(self):
         if abs(self.change_y) > 0:
@@ -78,7 +77,7 @@ class EnemySprite(Entity):
                                         figure out which animation to use.")
 
     def update_animation(self, delta_time=1/60):
-        super().update_animation()
+        self.prepare_animations()
 
         if self.state == "idle":
             self.texture = self.idle_texture_pair[self.face_direction]
@@ -93,9 +92,47 @@ class EnemySprite(Entity):
             self.walk_anim.update(self.change_x, self.dt)
 
 
-class RobotEnemySprite(EnemySprite):
-    pass
+class BattleBotEnemy(EnemySprite):
+    def __init__(self, boundary_right, boundary_left, center_x, center_y):
+        images_path = f"src/assets/images/battle_bot"
+        super().__init__(images_path)
+        self.speed = 3
+        self.change_x = self.speed
+        self.boundary_right = boundary_right
+        self.boundary_left = boundary_left
+        self.center_x = center_x
+        self.center_y = center_y
+        # Override EnemySprite animation to replace the max_player_speed parameter.
+        self.walk_anim = WalkingAnimation(self.walk_textures, max_player_speed=self.speed)  
 
+    def on_update(self, delta_time):
+        if (self.right > self.boundary_right and self.change_x > 0):
+            self.change_x = -self.speed  # Turn left
+
+        if (self.left < self.boundary_left and self.change_x < 0):
+            self.change_x = self.speed  # Turn right
+
+
+class MissleBotEnemy(EnemySprite):
+    def __init__(self, boundary_right, boundary_left, center_x, center_y):
+        images_path = f"src/assets/images/missle_bot"
+        super().__init__(images_path)
+        self.speed = 3
+        self.change_x = self.speed
+        self.boundary_right = boundary_right
+        self.boundary_left = boundary_left
+        self.center_x = center_x
+        self.center_y = center_y
+        self.walk_anim = WalkingAnimation(self.walk_textures, max_player_speed=self.speed)
+
+    def on_update(self, delta_time):
+        # TODO Make the missle_bot shoot missles
+        if (self.right > self.boundary_right and self.change_x > 0):
+            self.change_x = -self.speed  # Turn left
+
+        if (self.left < self.boundary_left and self.change_x < 0):
+            self.change_x = self.speed  # Turn right
+            
 
 class PlayerSprite(Entity):
     def __init__(self):
@@ -125,7 +162,7 @@ class PlayerSprite(Entity):
         )
 
     def register_one_physics_engine(self, physics_engine):
-        self.physics_engine = physics_engine
+        self.physics_engine: arcade.PhysicsEnginePlatformer = physics_engine
 
     def set_physics_state(self, up_pressed, down_pressed, right_pressed, left_pressed, god_mode):
         self.up_pressed = up_pressed
@@ -141,7 +178,8 @@ class PlayerSprite(Entity):
         if self.climbing:
             return "climb"
 
-        if (not self.physics_engine.can_jump()) and (not self.physics_engine.is_on_ladder()):  # This means the player is in the air
+        # This means the player is in the air
+        if (not self.physics_engine.can_jump()) and (not self.physics_engine.is_on_ladder()):
             if self.change_y > 0:
                 return "jump"
             else:
@@ -191,7 +229,7 @@ class PlayerSprite(Entity):
                 self.change_y = PLAYER_JUMP_SPEED
                 self.jump_count += 1
                 if self.jump_count == 1:
-                    jump_sound.play()
+                    sounds.jump_sound.play()
             
             # Apply acceleration based on the keys pressed
             if self.left_pressed and not self.right_pressed:

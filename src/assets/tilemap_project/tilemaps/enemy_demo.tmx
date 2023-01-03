@@ -1,7 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-down" width="60" height="45" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#87ceeb" nextlayerid="10" nextobjectid="1">
+<map version="1.9" tiledversion="1.9.0" orientation="orthogonal" renderorder="right-down" width="60" height="45" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#87ceeb" nextlayerid="14" nextobjectid="59">
  <tileset firstgid="1" source="../tilesets/Basic Tileset.tsx"/>
- <objectgroup id="5" name="Enemies"/>
+ <tileset firstgid="15" source="../tilesets/enemies_tileset.tsx"/>
+ <objectgroup id="11" name="Enemies">
+  <object id="42" template="../templates/enemies/battle_bot.tx" x="176.25" y="637.5">
+   <properties>
+    <property name="boundary_left" type="object" value="44"/>
+    <property name="boundary_right" type="object" value="45"/>
+   </properties>
+  </object>
+  <object id="43" template="../templates/enemies/missle_bot.tx" x="342.25" y="639">
+   <properties>
+    <property name="boundary_left" type="object" value="46"/>
+    <property name="boundary_right" type="object" value="47"/>
+   </properties>
+  </object>
+  <object id="44" x="136.5" y="635.5">
+   <point/>
+  </object>
+  <object id="45" x="247.5" y="634.75">
+   <point/>
+  </object>
+  <object id="46" x="295.25" y="634.75">
+   <point/>
+  </object>
+  <object id="47" x="407.5" y="635.75">
+   <point/>
+  </object>
+ </objectgroup>
  <layer id="9" name="Objects" width="60" height="45">
   <data encoding="csv">
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -142,7 +168,7 @@
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-4,4,4,4,4,4,4,2,4,4,4,4,4,4,2,4,4,2,4,4,4,4,4,4,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
+4,4,4,4,4,4,4,4,2,4,4,4,4,4,4,2,4,4,2,4,4,4,4,4,4,2,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,

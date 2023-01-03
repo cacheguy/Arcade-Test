@@ -5,9 +5,37 @@
     "extensionsPath": "../extensions",
     "folders": [
         "tilemaps",
-        "tilesets"
+        "tilesets",
+        "templates"
     ],
-    "objectTypesFile": "",
     "propertyTypes": [
+        {
+            "color": "#ffa0a0a4",
+            "id": 4,
+            "members": [
+                {
+                    "name": "boundary_left",
+                    "type": "object",
+                    "value": 0
+                },
+                {
+                    "name": "boundary_right",
+                    "type": "object",
+                    "value": 0
+                }
+            ],
+            "name": "boundary_RL",
+            "type": "class",
+            "useAs": [
+                "property",
+                "map",
+                "layer",
+                "object",
+                "tile",
+                "tileset",
+                "wangcolor",
+                "wangset"
+            ]
+        }
     ]
 }

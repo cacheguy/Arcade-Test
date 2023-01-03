@@ -19,15 +19,15 @@ MAX_SPEED = 5  # Speed limit
 ACCELERATION_RATE = 0.7  # How fast we accelearte
 FRICTION = 0.7  # How fast to slow down after we let off the key
 MAX_JUMP_COUNT = 8
-BLUE_JUMP_PAD_BOOST_SPEED = 27
+BLUE_JUMP_PAD_BOOST_SPEED = 30
 GREEN_JUMP_PAD_BOOST_SPEED = BLUE_JUMP_PAD_BOOST_SPEED * 1.3
 
 # Constants used to track if the player is facing left or right
 RIGHT_FACING = 0
 LEFT_FACING = 1
 
-SPRITE_PIXEL_SIZE = 16
-GRID_PIXEL_SIZE = SPRITE_PIXEL_SIZE * TILE_SCALING
+TILE_PIXEL_SIZE = 16
+GRID_PIXEL_SIZE = TILE_PIXEL_SIZE * TILE_SCALING
 
 # Player starting position
 PLAYER_START_X = 64
@@ -47,11 +47,3 @@ JUMP_PADS_LAYER = "Jump Pads"
 PLAYER_LAYER = "Player"
 OBJECTS_LAYER = "Objects"
 ALL_LAYERS = (PLATFORMS_LAYER, MOVING_PLATFORMS_LAYER, OBJECTS_LAYER, ENEMIES_LAYER)
-
-TYPES_TO_PLAYER = {
-    ("ladder",): LADDERS_LAYER,
-    ("coin",): COINS_LAYER,
-    ("lava",): DANGER_LAYER,
-    ("goal",): GOAL_LAYER,
-    ("blue_jump_pad", "green_jump_pad"): JUMP_PADS_LAYER
-}
